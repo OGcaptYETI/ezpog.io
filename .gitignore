@@ -101,3 +101,11 @@ out/
 # Misc
 *.pem
 *.key
+
+# Documentation folder (contains large files, CSVs, Excel files)
+DOCS/
+*.csv
+*.xlsx
+*.xls
+*.xlsm
+*.pdf
