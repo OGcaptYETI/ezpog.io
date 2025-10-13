@@ -13,13 +13,32 @@ export interface User {
   displayName: string | null;
   photoURL: string | null;
   organizationId: string;
+  
+  // System-level role (platform access)
+  systemRole: SystemRole;
+  
+  // Organization-level role (deprecated, use organizationRole)
   role: UserRole;
+  
+  // Organization-specific role and permissions
+  organizationRole?: OrganizationRole;
+  
+  status: UserStatus;
+  invitedBy?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   preferences?: UserPreferences;
 }
 
+export type SystemRole = "super_admin" | "admin" | "user";
 export type UserRole = "admin" | "manager" | "user" | "field_team";
+export type UserStatus = "active" | "suspended" | "pending";
+
+export interface OrganizationRole {
+  roleId: string;
+  roleName: string;
+  permissions: string[];
+}
 
 export interface UserPreferences {
   theme?: "light" | "dark" | "system";
@@ -34,16 +53,49 @@ export interface Organization {
   id: string;
   name: string;
   logoUrl?: string;
+  adminId: string; // Primary admin user ID
+  plan: OrganizationPlan;
+  status: OrganizationStatus;
+  createdBy: string; // Super admin who created it
   createdAt: Timestamp;
   updatedAt: Timestamp;
   settings?: OrganizationSettings;
+  metadata?: Record<string, unknown>;
 }
+
+export type OrganizationPlan = "free" | "pro" | "enterprise";
+export type OrganizationStatus = "active" | "trial" | "suspended";
 
 export interface OrganizationSettings {
   currency?: string;
   timezone?: string;
   dateFormat?: string;
+  features?: string[];
+  maxUsers?: number;
 }
+
+/**
+ * Role and Permission types
+ */
+export interface Role {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+  isCustom: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Permission {
+  id: string;
+  resource: string;
+  action: PermissionAction;
+  description?: string;
+}
+
+export type PermissionAction = "create" | "read" | "update" | "delete" | "manage";
 
 /**
  * Project types
@@ -333,6 +385,22 @@ export type NotificationType =
   | "planogram_approved"
   | "mention"
   | "system";
+
+/**
+ * Audit Log types
+ */
+export interface AuditLog {
+  id: string;
+  userId: string;
+  organizationId?: string;
+  action: string;
+  resource: string;
+  resourceId?: string;
+  details?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  timestamp: Timestamp;
+}
 
 /**
  * Common utility types

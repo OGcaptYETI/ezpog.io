@@ -260,7 +260,7 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link
-          to="/planograms/new"
+          to="/planograms/designer"
           className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-6 hover:from-blue-600 hover:to-blue-700 transition-all"
         >
           <Grid3x3 className="w-8 h-8 mb-4" />
@@ -271,7 +271,7 @@ export default function Dashboard() {
         </Link>
 
         <Link
-          to="/products/new"
+          to="/dashboard/products"
           className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg p-6 hover:from-green-600 hover:to-green-700 transition-all"
         >
           <Package className="w-8 h-8 mb-4" />
@@ -282,7 +282,7 @@ export default function Dashboard() {
         </Link>
 
         <Link
-          to="/projects/new"
+          to="/dashboard/projects"
           className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg p-6 hover:from-purple-600 hover:to-purple-700 transition-all"
         >
           <FolderKanban className="w-8 h-8 mb-4" />

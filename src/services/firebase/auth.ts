@@ -1,6 +1,8 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   updateProfile,
@@ -38,7 +40,9 @@ export async function signUp(
       displayName,
       photoURL: null,
       organizationId,
+      systemRole: 'user', // Default system role
       role: 'user',
+      status: 'active',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
       preferences: {
@@ -85,6 +89,48 @@ export async function signOut(): Promise<void> {
     await firebaseSignOut(auth);
   } catch (error) {
     console.error('Error signing out:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sign in with Google
+ */
+export async function signInWithGoogle(): Promise<User> {
+  try {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const firebaseUser = userCredential.user;
+
+    // Check if user document exists
+    let userData = await getUserData(firebaseUser.uid);
+
+    // If user doesn't exist in Firestore, create their document
+    if (!userData) {
+      userData = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email!,
+        displayName: firebaseUser.displayName || 'User',
+        photoURL: firebaseUser.photoURL,
+        organizationId: 'demo-org', // TODO: Create org on first sign-up
+        systemRole: 'user', // Default system role
+        role: 'user',
+        status: 'active',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        preferences: {
+          theme: 'system',
+          notifications: true,
+          emailUpdates: true,
+        },
+      };
+
+      await setDoc(doc(db, 'users', firebaseUser.uid), userData);
+    }
+
+    return userData;
+  } catch (error) {
+    console.error('Error signing in with Google:', error);
     throw error;
   }
 }

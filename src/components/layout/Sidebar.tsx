@@ -20,13 +20,13 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Projects', href: '/projects', icon: FolderKanban },
-  { name: 'Planograms', href: '/planograms', icon: Grid3x3 },
-  { name: 'Products', href: '/products', icon: Package },
-  { name: 'Inventory', href: '/inventory', icon: PackageSearch },
-  { name: 'Field Teams', href: '/field-teams', icon: Users },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+  { name: 'Planograms', href: '/dashboard/planograms', icon: Grid3x3 },
+  { name: 'Products', href: '/dashboard/products', icon: Package },
+  { name: 'Inventory', href: '/dashboard/inventory', icon: PackageSearch },
+  { name: 'Field Teams', href: '/dashboard/field-teams', icon: Users },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
 ];
 
 export function Sidebar() {

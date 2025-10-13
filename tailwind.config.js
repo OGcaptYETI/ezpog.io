@@ -7,6 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
+        // EZPOG Brand Colors
+        brand: {
+          prussian: '#0A273A',      // Prussian Blue (Primary)
+          orange: '#E26713',        // Spanish Orange (Secondary)
+          'red-orange': '#CC5329',  // Syracuse Red Orange (Accent)
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
