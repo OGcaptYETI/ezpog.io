@@ -84,6 +84,24 @@ service cloud.firestore {
     }
     
     // ============================================
+    // INVITATIONS COLLECTION
+    // ============================================
+    
+    match /invitations/{invitationId} {
+      // Super admins can read all invitations
+      allow read: if isSuperAdmin();
+      
+      // Super admins can create invitations
+      allow create: if isSuperAdmin();
+      
+      // Super admins can update invitations
+      allow update: if isSuperAdmin();
+      
+      // Super admins can delete invitations
+      allow delete: if isSuperAdmin();
+    }
+    
+    // ============================================
     // PROJECTS COLLECTION
     // ============================================
     

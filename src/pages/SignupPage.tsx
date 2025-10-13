@@ -1,11 +1,16 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { signUp, signInWithGoogle } from '@/services/firebase/auth';
+import { getInvitationByToken, acceptInvitation } from '@/services/firestore/invitations';
+import type { Invitation } from '@/services/firestore/invitations';
 import { Button } from '@/shared/components/ui/button';
-import { Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, Building2 } from 'lucide-react';
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite');
+  
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
@@ -14,6 +19,32 @@ export default function SignupPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const [loadingInvite, setLoadingInvite] = useState(!!inviteToken);
+
+  // Load invitation if token exists
+  useEffect(() => {
+    if (inviteToken) {
+      loadInvitation(inviteToken);
+    }
+  }, [inviteToken]);
+
+  async function loadInvitation(token: string) {
+    try {
+      const invite = await getInvitationByToken(token);
+      if (invite) {
+        setInvitation(invite);
+        setFormData(prev => ({ ...prev, email: invite.email }));
+      } else {
+        setError('Invalid or expired invitation link');
+      }
+    } catch (err) {
+      console.error('Error loading invitation:', err);
+      setError('Failed to load invitation');
+    } finally {
+      setLoadingInvite(false);
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -40,8 +71,23 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      await signUp(formData.email, formData.password, formData.displayName);
-      navigate('/');
+      // Sign up with invitation context if available
+      await signUp(
+        formData.email, 
+        formData.password, 
+        formData.displayName,
+        invitation ? {
+          organizationId: invitation.organizationId,
+          role: invitation.role
+        } : undefined
+      );
+      
+      // Accept invitation if it exists
+      if (invitation) {
+        await acceptInvitation(invitation.id);
+      }
+      
+      navigate('/dashboard');
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string };
       if (error.code === 'auth/email-already-in-use') {

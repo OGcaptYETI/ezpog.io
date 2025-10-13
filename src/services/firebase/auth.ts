@@ -14,24 +14,27 @@ import { auth, db } from './config';
 import type { User } from '@/types';
 
 /**
- * Sign up a new user with email and password
+ * Sign up with email and password
  */
 export async function signUp(
   email: string,
   password: string,
   displayName: string,
-  organizationId: string = 'default'
+  invitationContext?: {
+    organizationId: string;
+    role: User['role'];
+  }
 ): Promise<User> {
   try {
-    // Create auth user
-    const userCredential: UserCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
     // Update profile with display name
     await updateProfile(userCredential.user, { displayName });
+
+    // Use invitation context or defaults
+    const organizationId = invitationContext?.organizationId || 'demo-org';
+    const role = invitationContext?.role || 'user';
+    const systemRole: User['systemRole'] = invitationContext ? 'user' : 'user';
 
     // Create user document in Firestore
     const userData: User = {
@@ -40,8 +43,8 @@ export async function signUp(
       displayName,
       photoURL: null,
       organizationId,
-      systemRole: 'user', // Default system role
-      role: 'user',
+      systemRole,
+      role,
       status: 'active',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
