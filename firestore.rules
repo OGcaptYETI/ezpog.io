@@ -92,10 +92,17 @@ service cloud.firestore {
     match /invitations/{invitationId} {
       // Super admins can read all invitations
       // Anyone can read pending invitations (needed for signup)
-      allow read: if isSuperAdmin() || resource.data.status == 'pending';
+      // Org admins can read invitations for their organization
+      allow read: if isSuperAdmin() || 
+                     resource.data.status == 'pending' ||
+                     (isAuthenticated() && resource.data.organizationId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId);
       
       // Super admins can create invitations
-      allow create: if isSuperAdmin();
+      // Org admins can create invitations for their organization
+      allow create: if isSuperAdmin() || 
+                       (isAuthenticated() && 
+                        request.resource.data.organizationId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId &&
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       
       // Super admins can update invitations
       // Anyone can update to accept invitation (during signup)
@@ -103,7 +110,11 @@ service cloud.firestore {
                        (resource.data.status == 'pending' && request.resource.data.status == 'accepted');
       
       // Super admins can delete invitations
-      allow delete: if isSuperAdmin();
+      // Org admins can delete their organization's invitations
+      allow delete: if isSuperAdmin() ||
+                       (isAuthenticated() && 
+                        resource.data.organizationId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId &&
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
     
     // ============================================
