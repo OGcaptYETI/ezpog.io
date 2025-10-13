@@ -68,10 +68,22 @@ export function Sidebar() {
           );
         })}
         
-        {/* Admin-only Organization Settings */}
+        {/* Admin-only sections */}
         {isAdmin && (
           <>
             <div className="my-2 border-t border-gray-700" />
+            <Link
+              to="/dashboard/team"
+              className={cn(
+                'flex items-center gap-3 px-3 py-3 rounded-lg transition-colors',
+                location.pathname === '/dashboard/team'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              )}
+            >
+              <Users className="w-5 h-5 flex-shrink-0" />
+              {!collapsed && <span className="font-medium">Team</span>}
+            </Link>
             <Link
               to="/dashboard/org-settings"
               className={cn(
