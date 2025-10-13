@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signIn, signInWithGoogle } from '@/services/firebase/auth';
+import { signIn, signInWithGoogle, getUserData } from '@/services/firebase/auth';
 import { Button } from '@/shared/components/ui/button';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 
@@ -17,8 +17,17 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
-      navigate('/');
+      const userCredential = await signIn(email, password);
+      
+      // Get user data to check systemRole
+      const userData = await getUserData(userCredential.uid);
+      
+      // Route based on systemRole
+      if (userData?.systemRole === 'super_admin') {
+        navigate('/super-admin/users');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string };
       if (error.code === 'auth/user-not-found') {
@@ -27,6 +36,8 @@ export default function LoginPage() {
         setError('Incorrect password');
       } else if (error.code === 'auth/invalid-email') {
         setError('Invalid email address');
+      } else if (error.code === 'auth/invalid-credential') {
+        setError('Invalid email or password');
       } else {
         setError('Failed to sign in. Please try again.');
       }
@@ -40,8 +51,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithGoogle();
-      navigate('/');
+      const userData = await signInWithGoogle();
+      
+      // Route based on systemRole
+      if (userData?.systemRole === 'super_admin') {
+        navigate('/super-admin/users');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string };
       if (error.code === 'auth/popup-closed-by-user') {
