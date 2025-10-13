@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -17,10 +18,11 @@ import type { Organization } from '@/types';
 const COLLECTION_NAME = 'organizations';
 
 /**
- * Create a new organization
+ * Create a new organization with custom ID
  */
 export async function createOrganization(
-  data: Omit<Organization, 'id' | 'createdAt' | 'updatedAt'>
+  data: Omit<Organization, 'id' | 'createdAt' | 'updatedAt'>,
+  customId?: string
 ): Promise<string> {
   const orgData = {
     ...data,
@@ -28,8 +30,16 @@ export async function createOrganization(
     updatedAt: Timestamp.now(),
   };
 
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), orgData);
-  return docRef.id;
+  if (customId) {
+    // Use custom ID (e.g., "demo-org")
+    const docRef = doc(db, COLLECTION_NAME, customId);
+    await setDoc(docRef, orgData);
+    return customId;
+  } else {
+    // Auto-generate ID
+    const docRef = await addDoc(collection(db, COLLECTION_NAME), orgData);
+    return docRef.id;
+  }
 }
 
 /**

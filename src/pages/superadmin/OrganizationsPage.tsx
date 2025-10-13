@@ -18,6 +18,7 @@ import {
   Clock
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
+import { CreateOrganizationModal } from './CreateOrganizationModal';
 
 interface OrgWithStats extends Organization {
   stats?: {
@@ -32,6 +33,7 @@ export default function OrganizationsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<Organization['status'] | 'all'>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadOrganizations();
@@ -108,7 +110,10 @@ export default function OrganizationsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Organizations</h1>
           <p className="text-gray-600 mt-1">Manage all organizations on the platform</p>
         </div>
-        <Button className="bg-[#E26713] hover:bg-[#CC5329]">
+        <Button 
+          onClick={() => setShowCreateModal(true)}
+          className="bg-[#E26713] hover:bg-[#CC5329]"
+        >
           <Plus className="w-4 h-4 mr-2" />
           New Organization
         </Button>
@@ -299,6 +304,15 @@ export default function OrganizationsPage() {
           </table>
         </div>
       )}
+
+      {/* Create Organization Modal */}
+      <CreateOrganizationModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          loadOrganizations();
+        }}
+      />
     </div>
   );
 }
