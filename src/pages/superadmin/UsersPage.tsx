@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { getAllUsers } from '@/services/firestore/users';
+import { useNavigate } from 'react-router-dom';
+import { getAllUsers, updateUser, updateUserStatus, assignUserToOrganization } from '@/services/firestore/users';
 import { getAllOrganizations } from '@/services/firestore/organizations';
-import { getAllPendingInvitations, cancelInvitation, resendInvitation } from '@/services/firestore/invitations';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
+import { getAllPendingInvitations, cancelInvitation, resendInvitation, type Invitation } from '@/services/firestore/invitations';
 import type { User, Organization } from '@/types';
 import { 
   Users,
@@ -19,12 +21,16 @@ import {
   Trash2,
   Send,
   Copy,
-  X
+  X,
+  Eye
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { InviteUserModal } from './InviteUserModal';
+import { EditUserModal } from './EditUserModal';
 
 export default function UsersPage() {
+  const navigate = useNavigate();
+  const { startImpersonation } = useImpersonation();
   const [users, setUsers] = useState<User[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +38,9 @@ export default function UsersPage() {
   const [filterRole, setFilterRole] = useState<'all' | User['systemRole']>('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   useEffect(() => {
     loadData();
@@ -67,6 +75,55 @@ export default function UsersPage() {
   const getOrgName = (orgId: string) => {
     return organizations.find(o => o.id === orgId)?.name || orgId;
   };
+
+  async function handleSuspendUser(userId: string, currentStatus: User['status']) {
+    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    try {
+      await updateUserStatus(userId, newStatus);
+      await loadData();
+      alert(`User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully`);
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      alert('Failed to update user status');
+    }
+  }
+
+  async function handleChangeOrg(userId: string, userName: string) {
+    const orgId = prompt(`Enter new organization ID for ${userName}:`);
+    if (!orgId) return;
+
+    const role = prompt('Enter role (admin, manager, user, field_team):', 'user');
+    if (!role) return;
+
+    try {
+      await assignUserToOrganization(userId, orgId, role as User['role']);
+      await loadData();
+      alert('User organization updated successfully');
+    } catch (error) {
+      console.error('Error updating user organization:', error);
+      alert('Failed to update user organization');
+    }
+  }
+
+  async function handleChangeRoles(userId: string, userName: string, currentUser: User) {
+    const systemRole = prompt(`Change system role for ${userName} (super_admin, admin, user):`, currentUser.systemRole);
+    if (!systemRole) return;
+
+    const orgRole = prompt(`Change organization role for ${userName} (admin, manager, user, field_team):`, currentUser.role);
+    if (!orgRole) return;
+
+    try {
+      await updateUser(userId, {
+        systemRole: systemRole as User['systemRole'],
+        role: orgRole as User['role'],
+      });
+      await loadData();
+      alert('User roles updated successfully');
+    } catch (error) {
+      console.error('Error updating user roles:', error);
+      alert('Failed to update user roles');
+    }
+  }
 
   const roleStats = {
     all: users.length,
@@ -202,7 +259,7 @@ export default function UsersPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-visible">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -226,7 +283,7 @@ export default function UsersPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200" style={{ minHeight: '400px' }}>
               {filteredUsers.map((user) => (
                 <tr key={user.uid} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -300,32 +357,78 @@ export default function UsersPage() {
                             className="fixed inset-0 z-[100]" 
                             onClick={() => setOpenMenuId(null)}
                           />
-                          <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border z-[101]">
+                          <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-lg shadow-xl border z-[101]">
                             <div className="py-1">
-                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  startImpersonation(user);
+                                  navigate('/dashboard');
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 border-b"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View as User
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setEditingUser(user);
+                                  setShowEditModal(true);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
                                 <Edit className="w-4 h-4" />
                                 Edit User
                               </button>
-                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleChangeOrg(user.uid, user.displayName || user.email);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
                                 <Building2 className="w-4 h-4" />
                                 Change Organization
                               </button>
-                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleChangeRoles(user.uid, user.displayName || user.email, user);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
                                 <Shield className="w-4 h-4" />
                                 Change Roles
                               </button>
-                              {user.status === 'active' ? (
-                                <button className="w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-yellow-50 flex items-center gap-2">
-                                  <Ban className="w-4 h-4" />
-                                  Suspend User
-                                </button>
-                              ) : (
-                                <button className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
-                                  <CheckCircle className="w-4 h-4" />
-                                  Activate User
-                                </button>
-                              )}
-                              <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t">
+                              <button 
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleSuspendUser(user.uid, user.status);
+                                }}
+                                className={`w-full text-left px-4 py-2 text-sm hover:bg-yellow-50 flex items-center gap-2 ${
+                                  user.status === 'active' ? 'text-yellow-600' : 'text-green-600'
+                                }`}
+                              >
+                                {user.status === 'active' ? (
+                                  <>
+                                    <Ban className="w-4 h-4" />
+                                    Suspend User
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="w-4 h-4" />
+                                    Activate User
+                                  </>
+                                )}
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  alert('Delete functionality will be implemented with proper user data migration');
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t"
+                              >
                                 <Trash2 className="w-4 h-4" />
                                 Delete User
                               </button>
@@ -443,6 +546,20 @@ export default function UsersPage() {
           </table>
         </div>
       )}
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingUser(null);
+        }}
+        onSuccess={() => {
+          loadData();
+        }}
+        user={editingUser}
+        organizations={organizations}
+      />
 
       {/* Invite User Modal */}
       <InviteUserModal

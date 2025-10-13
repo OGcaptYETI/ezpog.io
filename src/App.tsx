@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './features/auth';
+import { ImpersonationProvider } from './contexts/ImpersonationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { SuperAdminRoute } from './components/SuperAdminRoute';
 import { AppLayout } from './components/layout/AppLayout';
@@ -24,7 +25,8 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <ImpersonationProvider>
+        <Router>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
@@ -74,7 +76,8 @@ function App() {
             <Route path="settings" element={<SuperAdminSettingsPage />} />
           </Route>
         </Routes>
-      </Router>
+        </Router>
+      </ImpersonationProvider>
     </AuthProvider>
   );
 }

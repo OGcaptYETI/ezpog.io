@@ -112,7 +112,7 @@ export interface Project {
   endDate?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export type ProjectStatus = "active" | "completed" | "on_hold" | "archived";
@@ -165,7 +165,7 @@ export interface Product {
   organizationId: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ProductDimensions {
@@ -216,7 +216,7 @@ export interface PlanogramFixture {
   fixtureId: string;
   position: Position;
   rotation?: number;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export interface PlacedProduct {
@@ -226,7 +226,7 @@ export interface PlacedProduct {
   position: Position;
   facings: number;
   shelfLevel?: number;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export interface Position {
@@ -238,8 +238,8 @@ export interface CanvasData {
   width: number;
   height: number;
   scale: number;
-  nodes?: any[];
-  edges?: any[];
+  nodes?: unknown[];
+  edges?: unknown[];
 }
 
 /**
@@ -323,7 +323,7 @@ export interface FieldVisit {
   checkOutTime?: Timestamp;
   photos?: string[];
   notes?: string;
-  complianceData?: Record<string, any>;
+  complianceData?: Record<string, unknown>;
   createdAt: Timestamp;
 }
 
@@ -352,7 +352,7 @@ export type ReportType =
   | "custom";
 
 export interface ReportConfiguration {
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   groupBy?: string[];
   sortBy?: string;
   columns?: string[];

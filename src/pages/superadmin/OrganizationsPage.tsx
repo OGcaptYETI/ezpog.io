@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   getAllOrganizations,
-  updateOrganizationStatus,
-  getOrganizationStats
+  getOrganizationStats,
+  deleteOrganization
 } from '@/services/firestore/organizations';
 import type { Organization } from '@/types';
 import { 
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { CreateOrganizationModal } from './CreateOrganizationModal';
+import { EditOrganizationModal } from './EditOrganizationModal';
 import { InviteUserModal } from './InviteUserModal';
 
 interface OrgWithStats extends Organization {
@@ -34,6 +36,7 @@ interface OrgWithStats extends Organization {
 }
 
 export default function OrganizationsPage() {
+  const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<OrgWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,6 +45,8 @@ export default function OrganizationsPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
 
   useEffect(() => {
     loadOrganizations();
@@ -73,13 +78,29 @@ export default function OrganizationsPage() {
     }
   }
 
-  async function handleStatusChange(orgId: string, newStatus: Organization['status']) {
-    try {
-      await updateOrganizationStatus(orgId, newStatus);
-      await loadOrganizations();
-    } catch (error) {
-      console.error('Error updating organization status:', error);
+  async function handleDeleteOrg(orgId: string, orgName: string) {
+    if (!confirm(`Are you sure you want to delete "${orgName}"? This action cannot be undone and will affect all users in this organization.`)) {
+      return;
     }
+    
+    try {
+      await deleteOrganization(orgId);
+      await loadOrganizations();
+      alert('Organization deleted successfully');
+    } catch (error) {
+      console.error('Error deleting organization:', error);
+      alert('Failed to delete organization. Make sure all users and data are removed first.');
+    }
+  }
+
+  function handleEditOrg(org: Organization) {
+    setEditingOrg(org);
+    setShowEditModal(true);
+    setOpenMenuId(null);
+  }
+
+  function handleViewUsers(orgId: string) {
+    navigate(`/super-admin/users?org=${orgId}`);
   }
 
   const filteredOrgs = organizations.filter(org => {
@@ -224,7 +245,7 @@ export default function OrganizationsPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-visible">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -251,7 +272,7 @@ export default function OrganizationsPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200" style={{ minHeight: '400px' }}>
               {filteredOrgs.map((org) => (
                 <tr key={org.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -318,11 +339,21 @@ export default function OrganizationsPage() {
                           />
                           <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border z-[101]">
                             <div className="py-1">
-                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  handleEditOrg(org);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
                                 <Eye className="w-4 h-4" />
                                 View Details
                               </button>
-                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  handleEditOrg(org);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
                                 <Edit className="w-4 h-4" />
                                 Edit Organization
                               </button>
@@ -337,11 +368,23 @@ export default function OrganizationsPage() {
                                 <UserPlus className="w-4 h-4" />
                                 Invite User to Org
                               </button>
-                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  handleViewUsers(org.id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
                                 <Users className="w-4 h-4" />
                                 View Users ({org.stats?.userCount || 0})
                               </button>
-                              <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t">
+                              <button 
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleDeleteOrg(org.id, org.name);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t"
+                              >
                                 <Trash2 className="w-4 h-4" />
                                 Delete Organization
                               </button>
@@ -365,6 +408,19 @@ export default function OrganizationsPage() {
         onSuccess={() => {
           loadOrganizations();
         }}
+      />
+
+      {/* Edit Organization Modal */}
+      <EditOrganizationModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingOrg(null);
+        }}
+        onSuccess={() => {
+          loadOrganizations();
+        }}
+        organization={editingOrg}
       />
 
       {/* Invite User Modal */}

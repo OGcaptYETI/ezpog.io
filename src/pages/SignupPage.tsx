@@ -4,7 +4,7 @@ import { signUp, signInWithGoogle } from '@/services/firebase/auth';
 import { getInvitationByToken, acceptInvitation } from '@/services/firestore/invitations';
 import type { Invitation } from '@/services/firestore/invitations';
 import { Button } from '@/shared/components/ui/button';
-import { Mail, Lock, User, AlertCircle, Building2 } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle } from 'lucide-react';
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -151,7 +151,17 @@ export default function SignupPage() {
         {/* Signup Card */}
         <div className="bg-white rounded-xl shadow-2xl p-10 border border-gray-100">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Create your account</h1>
-          <p className="text-gray-600 mb-6">Start your 14-day free trial</p>
+          <p className="text-gray-600 mb-6">
+            {invitation ? `Join ${invitation.organizationId}` : 'Start your 14-day free trial'}
+          </p>
+
+          {/* Loading Invitation */}
+          {loadingInvite && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+              <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-blue-800">Loading invitation...</p>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

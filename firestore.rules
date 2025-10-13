@@ -57,9 +57,11 @@ service cloud.firestore {
       // Anyone authenticated can read user profiles
       allow read: if isAuthenticated();
       
-      // Users can only write their own profile
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      // Users can create their own profile, super admins can create any
+      allow create: if isOwner(userId) || isSuperAdmin();
+      
+      // Users can update their own profile, super admins can update any
+      allow update: if isOwner(userId) || isSuperAdmin();
       
       // Only admins can delete users
       allow delete: if false; // Soft delete only
@@ -98,6 +100,24 @@ service cloud.firestore {
       allow update: if isSuperAdmin();
       
       // Super admins can delete invitations
+      allow delete: if isSuperAdmin();
+    }
+    
+    // ============================================
+    // SYSTEM SETTINGS COLLECTION
+    // ============================================
+    
+    match /system_settings/{settingId} {
+      // Super admins can read all settings
+      allow read: if isSuperAdmin();
+      
+      // Super admins can create settings
+      allow create: if isSuperAdmin();
+      
+      // Super admins can update settings
+      allow update: if isSuperAdmin();
+      
+      // Super admins can delete settings
       allow delete: if isSuperAdmin();
     }
     
