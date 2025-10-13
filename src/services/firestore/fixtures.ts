@@ -185,18 +185,18 @@ export async function duplicateFixture(id: string, newName: string, organization
     throw new Error('Fixture not found');
   }
   
+  // Destructure to omit id, createdAt, updatedAt
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _fixtureId, createdAt, updatedAt, ...fixtureData } = originalFixture;
+  
   const newFixture = {
-    ...originalFixture,
+    ...fixtureData,
     name: newName,
     organizationId,
     createdBy,
     isTemplate: false,
     isPublic: false,
   };
-  
-  delete newFixture.id;
-  delete newFixture.createdAt;
-  delete newFixture.updatedAt;
   
   return await createFixture(newFixture);
 }
