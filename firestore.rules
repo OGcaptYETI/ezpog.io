@@ -91,13 +91,16 @@ service cloud.firestore {
     
     match /invitations/{invitationId} {
       // Super admins can read all invitations
-      allow read: if isSuperAdmin();
+      // Anyone can read pending invitations (needed for signup)
+      allow read: if isSuperAdmin() || resource.data.status == 'pending';
       
       // Super admins can create invitations
       allow create: if isSuperAdmin();
       
       // Super admins can update invitations
-      allow update: if isSuperAdmin();
+      // Anyone can update to accept invitation (during signup)
+      allow update: if isSuperAdmin() || 
+                       (resource.data.status == 'pending' && request.resource.data.status == 'accepted');
       
       // Super admins can delete invitations
       allow delete: if isSuperAdmin();

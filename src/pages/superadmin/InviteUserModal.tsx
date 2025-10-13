@@ -86,8 +86,6 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, preselectedOrgId }
       
       // Reload pending invitations
       await loadData();
-      
-      onSuccess();
     } catch (err) {
       console.error('Error creating invitation:', err);
       setError('Failed to create invitation. Please try again.');
@@ -124,6 +122,13 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, preselectedOrgId }
     setError('');
   };
 
+  const handleClose = () => {
+    if (success) {
+      onSuccess(); // Refresh parent component if invitation was created
+    }
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -139,7 +144,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, preselectedOrgId }
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X className="w-6 h-6" />
@@ -268,7 +273,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess, preselectedOrgId }
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onClose}
+                  onClick={handleClose}
                   disabled={loading}
                 >
                   Cancel

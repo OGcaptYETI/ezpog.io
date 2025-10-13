@@ -15,6 +15,7 @@ import ProductsPage from './pages/ProductsPage';
 import InventoryPage from './pages/InventoryPage';
 import FieldTeamsPage from './pages/FieldTeamsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import OrganizationSettingsPage from './pages/OrganizationSettingsPage';
 import PlanogramPrototype from './pages/PlanogramPrototype';
 import SuperAdminOrganizationsPage from './pages/superadmin/OrganizationsPage';
 import SuperAdminUsersPage from './pages/superadmin/UsersPage';
@@ -49,6 +50,7 @@ function App() {
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="field-teams" element={<FieldTeamsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="org-settings" element={<OrganizationSettingsPage />} />
           </Route>
           
           {/* Planogram Designer (full screen, protected) */}

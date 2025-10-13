@@ -102,6 +102,10 @@ out/
 *.pem
 *.key
 
+# Test credentials (local only)
+.test-credentials.md
+*credentials*.md
+
 # Documentation folder (contains large files, CSVs, Excel files)
 DOCS/
 *.csv

@@ -8,10 +8,12 @@ import {
   Users,
   BarChart3,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useAuth } from '@/features/auth';
 
 interface NavItem {
   name: string;
@@ -31,7 +33,10 @@ const navigation: NavItem[] = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  
+  const isAdmin = user?.role === 'admin';
 
   return (
     <aside
@@ -62,6 +67,25 @@ export function Sidebar() {
             </Link>
           );
         })}
+        
+        {/* Admin-only Organization Settings */}
+        {isAdmin && (
+          <>
+            <div className="my-2 border-t border-gray-700" />
+            <Link
+              to="/dashboard/org-settings"
+              className={cn(
+                'flex items-center gap-3 px-3 py-3 rounded-lg transition-colors',
+                location.pathname === '/dashboard/org-settings'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              )}
+            >
+              <Settings className="w-5 h-5 flex-shrink-0" />
+              {!collapsed && <span className="font-medium">Organization Settings</span>}
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* Collapse Toggle */}

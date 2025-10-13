@@ -61,6 +61,15 @@ export interface Organization {
   updatedAt: Timestamp;
   settings?: OrganizationSettings;
   metadata?: Record<string, unknown>;
+  // Additional organizational details
+  industry?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
 }
 
 export type OrganizationPlan = "free" | "pro" | "enterprise";

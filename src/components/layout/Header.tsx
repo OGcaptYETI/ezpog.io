@@ -1,4 +1,4 @@
-import { User, LogOut, Settings } from 'lucide-react';
+import { User, LogOut, Settings, Building2 } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { signOut } from '@/services/firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,8 @@ export function Header() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  
+  const isAdmin = user?.role === 'admin';
 
   const handleLogout = async () => {
     try {
@@ -64,13 +66,32 @@ export function Header() {
                     <p className="text-xs text-gray-500">{user.email}</p>
                   </div>
                   <div className="py-1">
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3">
+                    {/* Admin-only Organization Settings */}
+                    {isAdmin && (
+                      <button 
+                        onClick={() => {
+                          navigate('/dashboard/org-settings');
+                          setShowMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                      >
+                        <Building2 className="w-4 h-4" />
+                        Organization Settings
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => {
+                        navigate('/dashboard/settings');
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                    >
                       <Settings className="w-4 h-4" />
-                      Settings
+                      My Settings
                     </button>
                     <button 
                       onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 border-t"
                     >
                       <LogOut className="w-4 h-4" />
                       Sign Out
