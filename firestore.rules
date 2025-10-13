@@ -1,0 +1,324 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if user belongs to organization
+    function belongsToOrg(orgId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+    }
+    
+    // Check if user has specific role in organization
+    function hasOrgRole(orgId, role) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Check if user is admin or manager
+    function isAdminOrManager(orgId) {
+      let member = get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data;
+      return isAuthenticated() && (member.role == 'admin' || member.role == 'manager');
+    }
+    
+    // Check if resource belongs to user's organization
+    function resourceBelongsToUserOrg() {
+      return isAuthenticated() && 
+             resource.data.organizationId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
+    }
+    
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if isAuthenticated();
+      
+      // Users can only write their own profile
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      
+      // Only admins can delete users
+      allow delete: if false; // Soft delete only
+    }
+    
+    // ============================================
+    // ORGANIZATIONS COLLECTION
+    // ============================================
+    
+    match /organizations/{orgId} {
+      // Members can read their organization
+      allow read: if belongsToOrg(orgId);
+      
+      // Only admins can create organizations
+      allow create: if isAuthenticated();
+      
+      // Only admins can update organization
+      allow update: if hasOrgRole(orgId, 'admin');
+      
+      // Only admins can delete organization
+      allow delete: if hasOrgRole(orgId, 'admin');
+      
+      // Organization members subcollection
+      match /members/{memberId} {
+        allow read: if belongsToOrg(orgId);
+        allow write: if hasOrgRole(orgId, 'admin');
+      }
+    }
+    
+    // ============================================
+    // PROJECTS COLLECTION
+    // ============================================
+    
+    match /projects/{projectId} {
+      // Members of organization can read projects
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      
+      // Authenticated users can create projects in their org
+      allow create: if isAuthenticated() && 
+                       belongsToOrg(request.resource.data.organizationId);
+      
+      // Project members and admins can update
+      allow update: if isAuthenticated() && (
+        request.auth.uid in resource.data.members ||
+        isAdminOrManager(resource.data.organizationId)
+      );
+      
+      // Only admins can delete projects
+      allow delete: if isAdminOrManager(resource.data.organizationId);
+      
+      // Project tasks subcollection
+      match /tasks/{taskId} {
+        allow read: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/projects/$(projectId)).data.organizationId);
+        allow write: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/projects/$(projectId)).data.organizationId);
+      }
+      
+      // Project files subcollection
+      match /files/{fileId} {
+        allow read: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/projects/$(projectId)).data.organizationId);
+        allow write: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/projects/$(projectId)).data.organizationId);
+      }
+    }
+    
+    // ============================================
+    // TASKS COLLECTION (Global)
+    // ============================================
+    
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow create: if isAuthenticated() && belongsToOrg(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && (
+        request.auth.uid in resource.data.assignedTo ||
+        request.auth.uid == resource.data.createdBy ||
+        isAdminOrManager(resource.data.organizationId)
+      );
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        isAdminOrManager(resource.data.organizationId)
+      );
+    }
+    
+    // ============================================
+    // PRODUCTS COLLECTION
+    // ============================================
+    
+    match /products/{productId} {
+      // All org members can read products
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      
+      // All org members can create products
+      allow create: if isAuthenticated() && belongsToOrg(request.resource.data.organizationId);
+      
+      // Creator and admins can update
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdminOrManager(resource.data.organizationId)
+      );
+      
+      // Only admins can delete
+      allow delete: if isAdminOrManager(resource.data.organizationId);
+    }
+    
+    // ============================================
+    // PACKAGING TYPES COLLECTION
+    // ============================================
+    
+    match /packaging-types/{typeId} {
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+      
+      // Only admins can write
+      allow write: if isAuthenticated() && (
+        resource.data.isGlobal == false && isAdminOrManager(resource.data.organizationId)
+      );
+    }
+    
+    // ============================================
+    // CATEGORIES COLLECTION
+    // ============================================
+    
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAdminOrManager(resource.data.organizationId);
+    }
+    
+    // ============================================
+    // FIXTURES COLLECTION
+    // ============================================
+    
+    match /fixtures/{fixtureId} {
+      // All org members can read fixtures
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      
+      // All org members can create fixtures
+      allow create: if isAuthenticated() && belongsToOrg(request.resource.data.organizationId);
+      
+      // Creator and admins can update
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        isAdminOrManager(resource.data.organizationId)
+      );
+      
+      // Only creator and admins can delete
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        isAdminOrManager(resource.data.organizationId)
+      );
+    }
+    
+    // ============================================
+    // PLANOGRAMS COLLECTION
+    // ============================================
+    
+    match /planograms/{planogramId} {
+      // All org members can read planograms
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      
+      // All org members can create planograms
+      allow create: if isAuthenticated() && belongsToOrg(request.resource.data.organizationId);
+      
+      // Creator and admins can update
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        isAdminOrManager(resource.data.organizationId)
+      );
+      
+      // Only admins can delete
+      allow delete: if isAdminOrManager(resource.data.organizationId);
+      
+      // Planogram versions subcollection
+      match /versions/{versionId} {
+        allow read: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/planograms/$(planogramId)).data.organizationId);
+        allow create: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/planograms/$(planogramId)).data.organizationId);
+        allow update, delete: if false; // Versions are immutable
+      }
+      
+      // Planogram assignments subcollection
+      match /assignments/{assignmentId} {
+        allow read: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/planograms/$(planogramId)).data.organizationId);
+        allow write: if isAdminOrManager(get(/databases/$(database)/documents/planograms/$(planogramId)).data.organizationId);
+      }
+    }
+    
+    // ============================================
+    // STORES COLLECTION
+    // ============================================
+    
+    match /stores/{storeId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAdminOrManager(resource.data.organizationId);
+    }
+    
+    // ============================================
+    // INVENTORY COLLECTION
+    // ============================================
+    
+    match /inventory/{inventoryId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+    }
+    
+    // ============================================
+    // FIELD TEAMS COLLECTION
+    // ============================================
+    
+    match /field-teams/{teamId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAdminOrManager(resource.data.organizationId);
+      
+      // Team members subcollection
+      match /members/{memberId} {
+        allow read: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/field-teams/$(teamId)).data.organizationId);
+        allow write: if isAdminOrManager(get(/databases/$(database)/documents/field-teams/$(teamId)).data.organizationId);
+      }
+      
+      // Team visits subcollection
+      match /visits/{visitId} {
+        allow read: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/field-teams/$(teamId)).data.organizationId);
+        allow create: if isAuthenticated() && belongsToOrg(get(/databases/$(database)/documents/field-teams/$(teamId)).data.organizationId);
+        allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+        allow delete: if isAdminOrManager(get(/databases/$(database)/documents/field-teams/$(teamId)).data.organizationId);
+      }
+    }
+    
+    // ============================================
+    // REPORTS COLLECTION
+    // ============================================
+    
+    match /reports/{reportId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow create: if isAuthenticated() && belongsToOrg(request.resource.data.organizationId);
+      allow update, delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        isAdminOrManager(resource.data.organizationId)
+      );
+    }
+    
+    // ============================================
+    // NOTIFICATIONS COLLECTION
+    // ============================================
+    
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isOwner(resource.data.userId);
+      
+      // System can create notifications
+      allow create: if isAuthenticated();
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isOwner(resource.data.userId);
+      
+      // Users can delete their own notifications
+      allow delete: if isOwner(resource.data.userId);
+    }
+    
+    // ============================================
+    // ACTIVITY LOG COLLECTION
+    // ============================================
+    
+    match /activity-log/{logId} {
+      // Admins can read activity logs for their org
+      allow read: if isAuthenticated() && isAdminOrManager(resource.data.organizationId);
+      
+      // System can create logs
+      allow create: if isAuthenticated();
+      
+      // Logs are immutable
+      allow update, delete: if false;
+    }
+  }
+}

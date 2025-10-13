@@ -1,0 +1,68 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isValidImageSize() {
+      return request.resource.size < 5 * 1024 * 1024; // 5MB
+    }
+    
+    function isValidFileSize() {
+      return request.resource.size < 10 * 1024 * 1024; // 10MB
+    }
+    
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // User profile images
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && isValidImageSize() && isImage();
+    }
+    
+    // Organization files
+    match /organizations/{orgId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidFileSize();
+    }
+    
+    // Product images
+    match /products/{productId}/{allPaths=**} {
+      allow read: if true; // Public read for product images
+      allow write: if isAuthenticated() && isValidImageSize() && isImage();
+    }
+    
+    // Planogram exports (PDFs, images)
+    match /planograms/{planogramId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.resource.size < 20 * 1024 * 1024; // 20MB for PDFs
+    }
+    
+    // Task files
+    match /taskFiles/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidFileSize();
+    }
+    
+    // Field visit photos
+    match /field-visits/{visitId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidImageSize() && isImage();
+    }
+    
+    // Project files
+    match /projects/{projectId}/files/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidFileSize();
+    }
+  }
+}
