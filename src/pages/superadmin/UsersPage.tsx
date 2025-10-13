@@ -11,8 +11,14 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  MoreVertical
+  MoreVertical,
+  UserPlus,
+  Edit,
+  Ban,
+  Trash2
 } from 'lucide-react';
+import { Button } from '@/shared/components/ui/button';
+import { InviteUserModal } from './InviteUserModal';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -20,6 +26,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | User['systemRole']>('all');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -83,6 +91,13 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold text-gray-900">All Users</h1>
           <p className="text-gray-600 mt-1">Manage platform-wide user access</p>
         </div>
+        <Button 
+          onClick={() => setShowInviteModal(true)}
+          className="bg-[#E26713] hover:bg-[#CC5329]"
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Invite User
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -264,9 +279,54 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button className="text-gray-400 hover:text-gray-600">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
+                    <div className="relative">
+                      <button 
+                        onClick={() => setOpenMenuId(openMenuId === user.uid ? null : user.uid)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+                      
+                      {openMenuId === user.uid && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setOpenMenuId(null)}
+                          />
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-20">
+                            <div className="py-1">
+                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                <Edit className="w-4 h-4" />
+                                Edit User
+                              </button>
+                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                <Building2 className="w-4 h-4" />
+                                Change Organization
+                              </button>
+                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                <Shield className="w-4 h-4" />
+                                Change Roles
+                              </button>
+                              {user.status === 'active' ? (
+                                <button className="w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-yellow-50 flex items-center gap-2">
+                                  <Ban className="w-4 h-4" />
+                                  Suspend User
+                                </button>
+                              ) : (
+                                <button className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 flex items-center gap-2">
+                                  <CheckCircle className="w-4 h-4" />
+                                  Activate User
+                                </button>
+                              )}
+                              <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t">
+                                <Trash2 className="w-4 h-4" />
+                                Delete User
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -274,6 +334,15 @@ export default function UsersPage() {
           </table>
         </div>
       )}
+
+      {/* Invite User Modal */}
+      <InviteUserModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onSuccess={() => {
+          loadData();
+        }}
+      />
     </div>
   );
 }

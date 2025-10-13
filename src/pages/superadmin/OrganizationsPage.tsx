@@ -15,10 +15,15 @@ import {
   MoreVertical,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Edit,
+  UserPlus,
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { CreateOrganizationModal } from './CreateOrganizationModal';
+import { InviteUserModal } from './InviteUserModal';
 
 interface OrgWithStats extends Organization {
   stats?: {
@@ -34,6 +39,9 @@ export default function OrganizationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<Organization['status'] | 'all'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrganizations();
@@ -294,9 +302,54 @@ export default function OrganizationsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button className="text-gray-400 hover:text-gray-600">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
+                    <div className="relative">
+                      <button 
+                        onClick={() => setOpenMenuId(openMenuId === org.id ? null : org.id)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+                      
+                      {openMenuId === org.id && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setOpenMenuId(null)}
+                          />
+                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border z-20">
+                            <div className="py-1">
+                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                <Eye className="w-4 h-4" />
+                                View Details
+                              </button>
+                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                <Edit className="w-4 h-4" />
+                                Edit Organization
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setSelectedOrgId(org.id);
+                                  setShowInviteModal(true);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <UserPlus className="w-4 h-4" />
+                                Invite User to Org
+                              </button>
+                              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                <Users className="w-4 h-4" />
+                                View Users ({org.stats?.userCount || 0})
+                              </button>
+                              <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t">
+                                <Trash2 className="w-4 h-4" />
+                                Delete Organization
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -312,6 +365,19 @@ export default function OrganizationsPage() {
         onSuccess={() => {
           loadOrganizations();
         }}
+      />
+
+      {/* Invite User Modal */}
+      <InviteUserModal
+        isOpen={showInviteModal}
+        onClose={() => {
+          setShowInviteModal(false);
+          setSelectedOrgId(null);
+        }}
+        onSuccess={() => {
+          loadOrganizations();
+        }}
+        preselectedOrgId={selectedOrgId || undefined}
       />
     </div>
   );
