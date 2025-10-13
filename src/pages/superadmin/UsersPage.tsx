@@ -297,10 +297,10 @@ export default function UsersPage() {
                       {openMenuId === user.uid && (
                         <>
                           <div 
-                            className="fixed inset-0 z-10" 
+                            className="fixed inset-0 z-[100]" 
                             onClick={() => setOpenMenuId(null)}
                           />
-                          <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border z-20">
+                          <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border z-[101]">
                             <div className="py-1">
                               <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
                                 <Edit className="w-4 h-4" />
