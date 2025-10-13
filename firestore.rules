@@ -11,33 +11,42 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    // Check if user is super admin (platform-wide access)
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.systemRole == 'super_admin';
+    }
+    
     // Check if user owns the resource
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Check if user belongs to organization
+    // Check if user belongs to organization (via organizationId field)
     function belongsToOrg(orgId) {
       return isAuthenticated() && 
-             exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId == orgId;
     }
     
     // Check if user has specific role in organization
     function hasOrgRole(orgId, role) {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == role;
+             belongsToOrg(orgId) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     
     // Check if user is admin or manager
     function isAdminOrManager(orgId) {
-      let member = get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data;
-      return isAuthenticated() && (member.role == 'admin' || member.role == 'manager');
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isAuthenticated() && 
+             belongsToOrg(orgId) &&
+             (userDoc.role == 'admin' || userDoc.role == 'manager');
     }
     
     // Check if resource belongs to user's organization
     function resourceBelongsToUserOrg() {
       return isAuthenticated() && 
-             resource.data.organizationId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
+             resource.data.organizationId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
     }
     
     // ============================================
@@ -61,23 +70,17 @@ service cloud.firestore {
     // ============================================
     
     match /organizations/{orgId} {
-      // Members can read their organization
-      allow read: if belongsToOrg(orgId);
+      // Super admins can do everything, members can read their org
+      allow read: if isSuperAdmin() || belongsToOrg(orgId);
       
-      // Only admins can create organizations
-      allow create: if isAuthenticated();
+      // Super admins and authenticated users can create
+      allow create: if isSuperAdmin() || isAuthenticated();
       
-      // Only admins can update organization
-      allow update: if hasOrgRole(orgId, 'admin');
+      // Super admins and org admins can update
+      allow update: if isSuperAdmin() || hasOrgRole(orgId, 'admin');
       
-      // Only admins can delete organization
-      allow delete: if hasOrgRole(orgId, 'admin');
-      
-      // Organization members subcollection
-      match /members/{memberId} {
-        allow read: if belongsToOrg(orgId);
-        allow write: if hasOrgRole(orgId, 'admin');
-      }
+      // Only super admins can delete organizations
+      allow delete: if isSuperAdmin();
     }
     
     // ============================================
