@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import type { PlanogramData } from '@/services/firestore/planograms';
 import {
-  PlanogramData,
   getPlanogram,
   getPlanogramsByOrganization,
   createPlanogram,

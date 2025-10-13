@@ -9,8 +9,7 @@ import {
   query,
   where,
   orderBy,
-  Timestamp,
-  type DocumentData
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
