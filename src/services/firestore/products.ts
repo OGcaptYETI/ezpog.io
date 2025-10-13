@@ -55,7 +55,7 @@ export interface ProductData {
   sku: string | null;
   description: string | null;
   tags: string[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   
   // Timestamps
   createdAt: Date;

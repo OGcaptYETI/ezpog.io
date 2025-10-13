@@ -36,7 +36,7 @@ export interface PlanogramData {
       id: string;
       type: string;
       position: { x: number; y: number };
-      data: Record<string, any>;
+      data: Record<string, unknown>;
     }>;
     edges: Array<{
       id: string;
@@ -53,7 +53,7 @@ export interface PlanogramData {
     position: { x: number; y: number };
     rotation: number | null;
     scale: number | null;
-    data: Record<string, any>;
+    data: Record<string, unknown>;
   }>;
   
   // Products placed on fixtures
@@ -66,7 +66,7 @@ export interface PlanogramData {
     facings: number;
     shelfLevel: number | null;
     rotation: number | null;
-    data: Record<string, any>;
+    data: Record<string, unknown>;
   }>;
   
   // Store assignments
@@ -82,7 +82,7 @@ export interface PlanogramData {
   
   // Metadata
   tags: string[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }

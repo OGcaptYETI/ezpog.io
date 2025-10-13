@@ -65,7 +65,7 @@ export interface FixtureData {
   
   // Metadata
   tags: string[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
