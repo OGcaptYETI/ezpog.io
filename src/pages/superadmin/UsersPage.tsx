@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getAllUsers } from '@/services/firestore/users';
 import { getAllOrganizations } from '@/services/firestore/organizations';
+import { getAllPendingInvitations, cancelInvitation, resendInvitation } from '@/services/firestore/invitations';
 import type { User, Organization } from '@/types';
 import { 
   Users,
@@ -15,7 +16,10 @@ import {
   UserPlus,
   Edit,
   Ban,
-  Trash2
+  Trash2,
+  Send,
+  Copy,
+  X
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { InviteUserModal } from './InviteUserModal';
@@ -28,6 +32,7 @@ export default function UsersPage() {
   const [filterRole, setFilterRole] = useState<'all' | User['systemRole']>('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -36,12 +41,14 @@ export default function UsersPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const [usersData, orgsData] = await Promise.all([
+      const [usersData, orgsData, invitesData] = await Promise.all([
         getAllUsers(),
-        getAllOrganizations()
+        getAllOrganizations(),
+        getAllPendingInvitations()
       ]);
       setUsers(usersData);
       setOrganizations(orgsData);
+      setPendingInvitations(invitesData);
     } catch (error) {
       console.error('Error loading users:', error);
     } finally {
@@ -293,7 +300,7 @@ export default function UsersPage() {
                             className="fixed inset-0 z-10" 
                             onClick={() => setOpenMenuId(null)}
                           />
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-20">
+                          <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border z-20">
                             <div className="py-1">
                               <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
                                 <Edit className="w-4 h-4" />
@@ -326,6 +333,108 @@ export default function UsersPage() {
                           </div>
                         </>
                       )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pending Invitations Section */}
+      {pendingInvitations.length > 0 && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b bg-yellow-50">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-yellow-600" />
+              Pending Invitations ({pendingInvitations.length})
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">Users who have been invited but haven't signed up yet</p>
+          </div>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Organization
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Expires
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {pendingInvitations.map((invite) => (
+                <tr key={invite.id} className="hover:bg-yellow-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-900">{invite.email}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-sm text-gray-900">
+                      <Building2 className="w-4 h-4 text-gray-400" />
+                      {invite.organizationName}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                      {invite.role}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {invite.expiresAt.toDate().toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          const token = await resendInvitation(invite.id);
+                          const link = `${window.location.origin}/signup?invite=${token}`;
+                          await navigator.clipboard.writeText(link);
+                          alert('New invitation link copied to clipboard!');
+                        }}
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        title="Resend invitation"
+                      >
+                        <Send className="w-4 h-4" />
+                        Resend
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const link = `${window.location.origin}/signup?invite=${invite.token}`;
+                          await navigator.clipboard.writeText(link);
+                          alert('Invitation link copied to clipboard!');
+                        }}
+                        className="text-gray-600 hover:text-gray-800 flex items-center gap-1"
+                        title="Copy invitation link"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copy
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (confirm('Cancel this invitation?')) {
+                            await cancelInvitation(invite.id);
+                            loadData();
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 flex items-center gap-1"
+                        title="Cancel invitation"
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel
+                      </button>
                     </div>
                   </td>
                 </tr>
