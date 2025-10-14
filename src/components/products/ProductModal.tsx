@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import type { ProductFormData } from '@/services/firestore/products';
@@ -19,20 +19,31 @@ interface ProductModalProps {
 
 type TabId = 'basic' | 'pricing' | 'packaging' | 'compliance' | 'inventory' | 'images';
 
+const getInitialFormData = (): ProductFormData => ({
+  productId: '',
+  upc: '',
+  name: '',
+  brand: '',
+  category: '',
+  status: 'active',
+});
+
 export function ProductModal({ isOpen, onClose, onSave, product, mode }: ProductModalProps) {
   const [activeTab, setActiveTab] = useState<TabId>('basic');
-  const [formData, setFormData] = useState<ProductFormData>(
-    product || {
-      productId: '',
-      upc: '',
-      name: '',
-      brand: '',
-      category: '',
-      status: 'active',
-    }
-  );
+  const [formData, setFormData] = useState<ProductFormData>(getInitialFormData());
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Update formData when product prop changes (for edit mode)
+  useEffect(() => {
+    if (product) {
+      setFormData(product);
+    } else {
+      setFormData(getInitialFormData());
+    }
+    // Reset to basic tab when opening modal
+    setActiveTab('basic');
+  }, [product, isOpen]);
 
   if (!isOpen) return null;
 

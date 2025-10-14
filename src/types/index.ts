@@ -190,7 +190,14 @@ export interface Product {
   unitSize?: number;
   unitOfMeasure?: string;    // oz, ml, g, kg, etc.
   unitsPerCase?: number;
+  palletQuantity?: number;   // Cases per pallet
   caseDimensions?: {
+    width: number;
+    height: number;
+    depth: number;
+    unit: string;            // inches or cm
+  };
+  palletDimensions?: {
     width: number;
     height: number;
     depth: number;
@@ -198,6 +205,8 @@ export interface Product {
   };
   weight?: number;
   weightUnit?: string;       // lbs, kg, etc.
+  palletWeight?: number;
+  palletWeightUnit?: string; // lbs, kg, ton, etc.
   
   // Legacy dimensions support
   dimensions?: ProductDimensions;
@@ -207,6 +216,7 @@ export interface Product {
   wholesalePrice?: number;
   costPrice?: number;
   currency?: string;         // USD, EUR, etc.
+  taxRate?: number;          // Tax rate percentage
   
   // Images & Media
   imageUrl?: string;         // Product image (for tiles/directory)
@@ -225,6 +235,8 @@ export interface Product {
   inStock?: boolean;
   stockLevel?: number;
   reorderPoint?: number;
+  minimumOrderQuantity?: number;
+  leadTimeDays?: number;
   status?: 'active' | 'inactive' | 'discontinued';
   
   // Metadata
