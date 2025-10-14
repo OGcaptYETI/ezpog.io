@@ -109,6 +109,24 @@ export function PricingTab({ formData, updateFormData }: PricingTabProps) {
           </div>
           <p className="mt-1 text-xs text-gray-500">Your cost to acquire or manufacture the product</p>
         </div>
+
+        {/* Tax Rate */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tax Rate (%)
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            value={formData.taxRate || ''}
+            onChange={(e) => updateFormData({ taxRate: parseFloat(e.target.value) || undefined })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="8.5"
+          />
+          <p className="mt-1 text-xs text-gray-500">Sales tax rate percentage</p>
+        </div>
       </div>
 
       {/* Pricing Summary */}

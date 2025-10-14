@@ -130,6 +130,36 @@ export function InventoryTab({ formData, updateFormData }: InventoryTabProps) {
           </div>
           <p className="mt-1 text-xs text-gray-500">Minimum quantity before reordering</p>
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Minimum Order Quantity
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={formData.minimumOrderQuantity || ''}
+            onChange={(e) => updateFormData({ minimumOrderQuantity: parseInt(e.target.value) || undefined })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter minimum order qty"
+          />
+          <p className="mt-1 text-xs text-gray-500">Minimum units required per order</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Lead Time (Days)
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={formData.leadTimeDays || ''}
+            onChange={(e) => updateFormData({ leadTimeDays: parseInt(e.target.value) || undefined })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter lead time in days"
+          />
+          <p className="mt-1 text-xs text-gray-500">Days from order to delivery</p>
+        </div>
       </div>
 
       {/* Stock Alert */}

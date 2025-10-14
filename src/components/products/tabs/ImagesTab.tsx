@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { ProductFormData } from '@/services/firestore/products';
 import { uploadProductImage, uploadThumbnail } from '@/services/firebase/storage';
 import { useAuth } from '@/features/auth';
-import { Image as ImageIcon, Upload, X, Loader } from 'lucide-react';
+import { Image as ImageIcon, Upload, X, Loader, Plus } from 'lucide-react';
 
 interface ImagesTabProps {
   formData: ProductFormData;
@@ -71,109 +71,112 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
         <h3 className="text-lg font-semibold text-gray-900">Product Images</h3>
       </div>
 
-      {/* Product Image */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Product Image
-        </label>
-        <p className="text-xs text-gray-500 mb-3">
-          Main product image displayed in tiles and directory
-        </p>
-        
-        {formData.imageUrl ? (
-          <div className="relative inline-block">
-            <img
-              src={formData.imageUrl}
-              alt="Product"
-              className="w-48 h-48 object-cover rounded-lg border border-gray-300"
-            />
-            <button
-              type="button"
-              onClick={() => updateFormData({ imageUrl: undefined })}
-              className="absolute -top-2 -right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <label className="flex flex-col items-center justify-center w-48 h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(file, 'product');
-              }}
-              className="hidden"
-              disabled={uploading === 'product'}
-            />
-            {uploading === 'product' ? (
-              <Loader className="w-8 h-8 text-blue-600 animate-spin" />
-            ) : (
-              <>
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500">Upload Image</span>
-              </>
-            )}
+      {/* Main Images Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Product Image */}
+        <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+          <label className="block text-sm font-medium text-gray-900 mb-1">
+            Product Image
           </label>
-        )}
-      </div>
+          <p className="text-xs text-gray-500 mb-3">
+            Main image (tiles & directory)
+          </p>
+          
+          {formData.imageUrl ? (
+            <div className="relative inline-block">
+              <img
+                src={formData.imageUrl}
+                alt="Product"
+                className="w-full aspect-square object-cover rounded-lg border-2 border-gray-300"
+              />
+              <button
+                type="button"
+                onClick={() => updateFormData({ imageUrl: undefined })}
+                className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file, 'product');
+                }}
+                className="hidden"
+                disabled={uploading === 'product'}
+              />
+              {uploading === 'product' ? (
+                <Loader className="w-10 h-10 text-blue-600 animate-spin" />
+              ) : (
+                <>
+                  <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-600 font-medium">Upload Image</span>
+                </>
+              )}
+            </label>
+          )}
+        </div>
 
-      {/* SKU Image */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          SKU Image (For Fixtures)
-        </label>
-        <p className="text-xs text-gray-500 mb-3">
-          Product image used on planogram fixtures
-        </p>
-        
-        {formData.skuImageUrl ? (
-          <div className="relative inline-block">
-            <img
-              src={formData.skuImageUrl}
-              alt="SKU"
-              className="w-48 h-48 object-cover rounded-lg border border-gray-300"
-            />
-            <button
-              type="button"
-              onClick={() => updateFormData({ skuImageUrl: undefined })}
-              className="absolute -top-2 -right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <label className="flex flex-col items-center justify-center w-48 h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(file, 'sku');
-              }}
-              className="hidden"
-              disabled={uploading === 'sku'}
-            />
-            {uploading === 'sku' ? (
-              <Loader className="w-8 h-8 text-blue-600 animate-spin" />
-            ) : (
-              <>
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500">Upload SKU Image</span>
-              </>
-            )}
+        {/* SKU Image */}
+        <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+          <label className="block text-sm font-medium text-gray-900 mb-1">
+            SKU Image (Planogram)
           </label>
-        )}
+          <p className="text-xs text-gray-500 mb-3">
+            Used on planogram fixtures
+          </p>
+          
+          {formData.skuImageUrl ? (
+            <div className="relative inline-block">
+              <img
+                src={formData.skuImageUrl}
+                alt="SKU"
+                className="w-full aspect-square object-cover rounded-lg border-2 border-gray-300"
+              />
+              <button
+                type="button"
+                onClick={() => updateFormData({ skuImageUrl: undefined })}
+                className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file, 'sku');
+                }}
+                className="hidden"
+                disabled={uploading === 'sku'}
+              />
+              {uploading === 'sku' ? (
+                <Loader className="w-10 h-10 text-blue-600 animate-spin" />
+              ) : (
+                <>
+                  <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-600 font-medium">Upload SKU Image</span>
+                </>
+              )}
+            </label>
+          )}
+        </div>
       </div>
 
       {/* Thumbnail */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+        <label className="block text-sm font-medium text-gray-900 mb-1">
           Thumbnail
         </label>
         <p className="text-xs text-gray-500 mb-3">
-          Small preview image (automatically compressed)
+          Small preview (auto-compressed to 200x200)
         </p>
         
         {formData.thumbnailUrl ? (
@@ -181,18 +184,18 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
             <img
               src={formData.thumbnailUrl}
               alt="Thumbnail"
-              className="w-24 h-24 object-cover rounded-lg border border-gray-300"
+              className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300"
             />
             <button
               type="button"
               onClick={() => updateFormData({ thumbnailUrl: undefined })}
-              className="absolute -top-2 -right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+              className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3 h-3" />
             </button>
           </div>
         ) : (
-          <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+          <label className="inline-flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
             <input
               type="file"
               accept="image/*"
@@ -204,35 +207,38 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
               disabled={uploading === 'thumbnail'}
             />
             {uploading === 'thumbnail' ? (
-              <Loader className="w-4 h-4 text-blue-600 animate-spin" />
+              <Loader className="w-6 h-6 text-blue-600 animate-spin" />
             ) : (
-              <Upload className="w-6 h-6 text-gray-400" />
+              <>
+                <Upload className="w-6 h-6 text-gray-400 mb-1" />
+                <span className="text-xs text-gray-600 font-medium">Upload</span>
+              </>
             )}
           </label>
         )}
       </div>
 
       {/* Additional Images */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+        <label className="block text-sm font-medium text-gray-900 mb-1">
           Additional Images
         </label>
-        <p className="text-xs text-gray-500 mb-3">
-          Add multiple product images
+        <p className="text-xs text-gray-500 mb-4">
+          Gallery images (multiple angles, packaging, etc.)
         </p>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {formData.additionalImages?.map((url, index) => (
-            <div key={index} className="relative">
+            <div key={index} className="relative aspect-square">
               <img
                 src={url}
                 alt={`Additional ${index + 1}`}
-                className="w-full h-32 object-cover rounded-lg border border-gray-300"
+                className="w-full h-full object-cover rounded-lg border-2 border-gray-300"
               />
               <button
                 type="button"
                 onClick={() => removeAdditionalImage(index)}
-                className="absolute -top-2 -right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                className="absolute -top-2 -right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -240,7 +246,7 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
           ))}
 
           {/* Add More Button */}
-          <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+          <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
             <input
               type="file"
               accept="image/*"
@@ -255,8 +261,8 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
               <Loader className="w-6 h-6 text-blue-600 animate-spin" />
             ) : (
               <>
-                <Upload className="w-6 h-6 text-gray-400 mb-1" />
-                <span className="text-xs text-gray-500">Add Image</span>
+                <Plus className="w-6 h-6 text-gray-400 mb-1" />
+                <span className="text-xs text-gray-600 font-medium">Add</span>
               </>
             )}
           </label>

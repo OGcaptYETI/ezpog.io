@@ -48,6 +48,7 @@ export interface ProductFormData {
   unitSize?: number;
   unitOfMeasure?: string;
   unitsPerCase?: number;
+  palletQuantity?: number;
   caseDimensions?: {
     width: number;
     height: number;
@@ -62,6 +63,7 @@ export interface ProductFormData {
   wholesalePrice?: number;
   costPrice?: number;
   currency?: string;
+  taxRate?: number;
   
   // Images
   imageUrl?: string;
@@ -80,6 +82,8 @@ export interface ProductFormData {
   inStock?: boolean;
   stockLevel?: number;
   reorderPoint?: number;
+  minimumOrderQuantity?: number;
+  leadTimeDays?: number;
   status?: 'active' | 'inactive' | 'discontinued';
   
   // Metadata

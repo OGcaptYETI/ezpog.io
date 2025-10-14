@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import type { ProductFormData } from '@/services/firestore/products';
-import { Shield, AlertTriangle } from 'lucide-react';
+import { Shield, AlertTriangle, Plus, X } from 'lucide-react';
 
 interface ComplianceTabProps {
   formData: ProductFormData;
@@ -15,11 +16,32 @@ const certifications = [
 ];
 
 export function ComplianceTab({ formData, updateFormData }: ComplianceTabProps) {
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [newWarning, setNewWarning] = useState('');
+  const [customAllergen, setCustomAllergen] = useState('');
+  const [nutritionJson, setNutritionJson] = useState(
+    formData.nutritionFacts ? JSON.stringify(formData.nutritionFacts, null, 2) : ''
+  );
+
   const toggleAllergen = (allergen: string) => {
     const current = formData.allergens || [];
     const updated = current.includes(allergen)
       ? current.filter(a => a !== allergen)
       : [...current, allergen];
+    updateFormData({ allergens: updated });
+  };
+
+  const addCustomAllergen = () => {
+    if (customAllergen.trim()) {
+      updateFormData({ 
+        allergens: [...(formData.allergens || []), customAllergen.trim()] 
+      });
+      setCustomAllergen('');
+    }
+  };
+
+  const removeAllergen = (allergen: string) => {
+    const updated = (formData.allergens || []).filter(a => a !== allergen);
     updateFormData({ allergens: updated });
   };
 
@@ -32,11 +54,12 @@ export function ComplianceTab({ formData, updateFormData }: ComplianceTabProps) 
   };
 
   const addWarning = () => {
-    const warning = prompt('Enter warning text:');
-    if (warning) {
+    if (newWarning.trim()) {
       updateFormData({ 
-        warnings: [...(formData.warnings || []), warning] 
+        warnings: [...(formData.warnings || []), newWarning.trim()] 
       });
+      setNewWarning('');
+      setShowWarningModal(false);
     }
   };
 
@@ -44,6 +67,20 @@ export function ComplianceTab({ formData, updateFormData }: ComplianceTabProps) 
     const updated = [...(formData.warnings || [])];
     updated.splice(index, 1);
     updateFormData({ warnings: updated });
+  };
+
+  const handleNutritionChange = (value: string) => {
+    setNutritionJson(value);
+    if (!value.trim()) {
+      updateFormData({ nutritionFacts: undefined });
+      return;
+    }
+    try {
+      const parsed = JSON.parse(value);
+      updateFormData({ nutritionFacts: parsed });
+    } catch {
+      // Invalid JSON - don't update, but keep the text for editing
+    }
   };
 
   return (
@@ -73,7 +110,7 @@ export function ComplianceTab({ formData, updateFormData }: ComplianceTabProps) 
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Allergen Information
         </label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
           {commonAllergens.map(allergen => (
             <label
               key={allergen}
@@ -88,6 +125,46 @@ export function ComplianceTab({ formData, updateFormData }: ComplianceTabProps) 
               <span className="text-sm">{allergen}</span>
             </label>
           ))}
+        </div>
+
+        {/* Custom Allergens */}
+        {(formData.allergens || []).some(a => !commonAllergens.includes(a)) && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {(formData.allergens || []).filter(a => !commonAllergens.includes(a)).map(allergen => (
+              <span
+                key={allergen}
+                className="inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm"
+              >
+                {allergen}
+                <button
+                  type="button"
+                  onClick={() => removeAllergen(allergen)}
+                  className="hover:text-red-900"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={customAllergen}
+            onChange={(e) => setCustomAllergen(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomAllergen())}
+            placeholder="Add custom allergen (e.g., Phenylalanine)"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          />
+          <button
+            type="button"
+            onClick={addCustomAllergen}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </button>
         </div>
       </div>
 
@@ -122,10 +199,11 @@ export function ComplianceTab({ formData, updateFormData }: ComplianceTabProps) 
           </label>
           <button
             type="button"
-            onClick={addWarning}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            onClick={() => setShowWarningModal(true)}
+            className="px-3 py-1.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-1.5 text-sm font-medium"
           >
-            + Add Warning
+            <Plus className="w-4 h-4" />
+            Add Warning
           </button>
         </div>
         
@@ -161,21 +239,60 @@ export function ComplianceTab({ formData, updateFormData }: ComplianceTabProps) 
           Nutrition Facts (JSON)
         </label>
         <textarea
-          value={formData.nutritionFacts ? JSON.stringify(formData.nutritionFacts, null, 2) : ''}
-          onChange={(e) => {
-            try {
-              const parsed = JSON.parse(e.target.value);
-              updateFormData({ nutritionFacts: parsed });
-            } catch {
-              // Invalid JSON - don't update
-            }
-          }}
-          rows={6}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-          placeholder={`{\n  "servingSize": "1 cup",\n  "calories": 150,\n  "totalFat": "5g",\n  "protein": "8g"\n}`}
+          value={nutritionJson}
+          onChange={(e) => handleNutritionChange(e.target.value)}
+          rows={8}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm bg-gray-50"
+          placeholder={`{\n  "servingSize": "1 cup (240ml)",\n  "servingsPerContainer": 2,\n  "calories": 150,\n  "totalFat": "5g",\n  "sodium": "200mg",\n  "totalCarbohydrate": "25g",\n  "sugars": "15g",\n  "protein": "8g"\n}`}
         />
-        <p className="mt-1 text-xs text-gray-500">Enter nutrition information as JSON format</p>
+        <p className="mt-1 text-xs text-gray-500">Enter nutrition information as valid JSON format</p>
       </div>
+
+      {/* Warning Modal */}
+      {showWarningModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-300">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-yellow-100 rounded-lg">
+                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Add Warning</h3>
+              </div>
+              
+              <textarea
+                value={newWarning}
+                onChange={(e) => setNewWarning(e.target.value)}
+                rows={4}
+                autoFocus
+                placeholder="Enter warning or disclaimer text...\n\nExample: Contains nicotine. Nicotine is an addictive chemical."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-4 text-sm"
+              />
+              
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWarningModal(false);
+                    setNewWarning('');
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={addWarning}
+                  disabled={!newWarning.trim()}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add Warning
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
