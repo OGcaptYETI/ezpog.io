@@ -6,7 +6,7 @@ import type { Product } from '@/types';
 import { Package, Plus, Search, Grid3x3, List, Filter, MoreVertical, Edit, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { ProductModal } from '@/components/products/ProductModal';
-import { useToast } from '@/shared/components/ui/toast';
+import { useToast } from '@/shared/components/ui/toast-context';
 
 type ViewMode = 'grid' | 'list';
 
