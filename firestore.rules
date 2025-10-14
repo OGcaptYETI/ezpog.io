@@ -195,16 +195,18 @@ service cloud.firestore {
       // All org members can read products
       allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
       
-      // All org members can create products
-      allow create: if isAuthenticated() && belongsToOrg(request.resource.data.organizationId);
+      // All org members can create products in their organization
+      allow create: if isAuthenticated() && 
+                       belongsToOrg(request.resource.data.organizationId) &&
+                       request.resource.data.userId == request.auth.uid;
       
-      // Creator and admins can update
+      // Creator and admins/managers can update
       allow update: if isAuthenticated() && (
         request.auth.uid == resource.data.userId ||
         isAdminOrManager(resource.data.organizationId)
       );
       
-      // Only admins can delete
+      // Only admins and managers can delete
       allow delete: if isAdminOrManager(resource.data.organizationId);
     }
     
@@ -212,14 +214,17 @@ service cloud.firestore {
     // PACKAGING TYPES COLLECTION
     // ============================================
     
-    match /packaging-types/{typeId} {
+    match /packagingTypes/{packagingTypeId} {
       // All authenticated users can read
       allow read: if isAuthenticated();
       
-      // Only admins can write
-      allow write: if isAuthenticated() && (
-        resource.data.isGlobal == false && isAdminOrManager(resource.data.organizationId)
-      );
+      // Only admins and managers can create, update, delete
+      allow create: if isAuthenticated() && 
+                       isAdminOrManager(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && 
+                       isAdminOrManager(resource.data.organizationId);
+      allow delete: if isAuthenticated() && 
+                       isAdminOrManager(resource.data.organizationId);
     }
     
     // ============================================
@@ -227,8 +232,16 @@ service cloud.firestore {
     // ============================================
     
     match /categories/{categoryId} {
-      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
-      allow write: if isAdminOrManager(resource.data.organizationId);
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+      
+      // Only admins and managers can create, update, delete
+      allow create: if isAuthenticated() && 
+                       isAdminOrManager(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && 
+                       isAdminOrManager(resource.data.organizationId);
+      allow delete: if isAuthenticated() && 
+                       isAdminOrManager(resource.data.organizationId);
     }
     
     // ============================================

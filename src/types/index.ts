@@ -162,20 +162,91 @@ export interface TaskComment {
  * Product types
  */
 export interface Product {
+  // Core Identification
   id: string;
+  organizationId: string;
+  productId: string;          // User-defined product ID/SKU
+  upc: string;               // Universal Product Code
+  ean?: string;              // European Article Number
+  gtin?: string;             // Global Trade Item Number
+  
+  // Basic Information
   name: string;
+  description?: string;
   brand: string;
   brandFamily?: string;
-  upc: string;
+  manufacturer?: string;
+  company?: string;
+  
+  // Categorization
   category: string;
-  packagingTypeId: string;
+  subCategory?: string;
+  department?: string;
+  segment?: string;          // Market segment: Food & Beverage, Health & Beauty, etc.
+  
+  // Packaging & Dimensions
+  packagingTypeId?: string;
+  packagingType?: string;    // Bottle, Can, Box, etc.
+  unitSize?: number;
+  unitOfMeasure?: string;    // oz, ml, g, kg, etc.
+  unitsPerCase?: number;
+  caseDimensions?: {
+    width: number;
+    height: number;
+    depth: number;
+    unit: string;            // inches or cm
+  };
+  weight?: number;
+  weightUnit?: string;       // lbs, kg, etc.
+  
+  // Legacy dimensions support
   dimensions?: ProductDimensions;
-  imageUrl?: string;
-  organizationId: string;
+  
+  // Pricing
+  retailPrice?: number;
+  wholesalePrice?: number;
+  costPrice?: number;
+  currency?: string;         // USD, EUR, etc.
+  
+  // Images & Media
+  imageUrl?: string;         // Product image (for tiles/directory)
+  skuImageUrl?: string;      // SKU image (for fixtures)
+  thumbnailUrl?: string;
+  additionalImages?: string[];
+  
+  // Compliance & Regulatory
+  ingredients?: string;
+  allergens?: string[];
+  nutritionFacts?: Record<string, unknown>;
+  certifications?: string[]; // Organic, Kosher, Halal, etc.
+  warnings?: string[];       // Tobacco warnings, age restrictions, etc.
+  
+  // Inventory & Status
+  inStock?: boolean;
+  stockLevel?: number;
+  reorderPoint?: number;
+  status?: 'active' | 'inactive' | 'discontinued';
+  
+  // Metadata
+  userId?: string;           // Creator user ID
+  createdBy?: string;        // Creator name
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  projects?: string[];       // Associated project IDs
+  tags?: string[];
+  notes?: string;
   metadata?: Record<string, unknown>;
 }
+
+export type ProductSegment = 
+  | 'food-beverage' 
+  | 'health-beauty' 
+  | 'household' 
+  | 'pharmaceuticals' 
+  | 'pet-products' 
+  | 'tobacco' 
+  | 'alternative-products' 
+  | 'wellness';
 
 export interface ProductDimensions {
   width: number;
@@ -190,6 +261,16 @@ export interface PackagingType {
   description?: string;
   defaultDimensions?: ProductDimensions;
   organizationId: string;
+  dimensions?: {
+    width: number;
+    height: number;
+    depth: number;
+    unit: string;
+  };
+  weight?: number;
+  weightUnit?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface Category {
@@ -197,6 +278,9 @@ export interface Category {
   name: string;
   parentId?: string;
   organizationId: string;
+  description?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 /**
