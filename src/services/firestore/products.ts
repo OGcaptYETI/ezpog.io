@@ -111,8 +111,16 @@ export async function createProduct(
   userId: string,
   createdBy: string
 ): Promise<string> {
+  // Remove undefined values (Firestore doesn't accept undefined)
+  const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
+    if (value !== undefined) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {} as Record<string, unknown>);
+  
   const productData = {
-    ...data,
+    ...cleanData,
     organizationId,
     userId,
     createdBy,
@@ -269,8 +277,17 @@ export async function searchProducts(
  */
 export async function updateProduct(id: string, data: Partial<ProductFormData>): Promise<void> {
   const docRef = doc(db, COLLECTION_NAME, id);
+  
+  // Remove undefined values (Firestore doesn't accept undefined)
+  const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
+    if (value !== undefined) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {} as Record<string, unknown>);
+  
   await updateDoc(docRef, {
-    ...data,
+    ...cleanData,
     updatedAt: Timestamp.now(),
   });
 }
