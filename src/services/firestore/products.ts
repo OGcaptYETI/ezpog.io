@@ -165,7 +165,7 @@ export async function getProductsByOrganization(
     status?: 'active' | 'inactive' | 'discontinued';
   }
 ): Promise<Product[]> {
-  let q = query(
+  const q = query(
     collection(db, COLLECTION_NAME),
     where('organizationId', '==', organizationId),
     orderBy('name', 'asc')
