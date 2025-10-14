@@ -55,8 +55,16 @@ export interface ProductFormData {
     depth: number;
     unit: string;
   };
+  palletDimensions?: {
+    width: number;
+    height: number;
+    depth: number;
+    unit: string;
+  };
   weight?: number;
   weightUnit?: string;
+  palletWeight?: number;
+  palletWeightUnit?: string;
   
   // Pricing
   retailPrice?: number;

@@ -248,6 +248,140 @@ export function PackagingTab({ formData, updateFormData }: PackagingTabProps) {
           </div>
         </div>
       </div>
+
+      {/* Pallet Dimensions */}
+      <div>
+        <h4 className="text-sm font-semibold text-gray-900 mb-3">Pallet Dimensions</h4>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Width
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.palletDimensions?.width || ''}
+              onChange={(e) => updateFormData({
+                palletDimensions: {
+                  ...formData.palletDimensions,
+                  width: parseFloat(e.target.value) || 0,
+                  height: formData.palletDimensions?.height || 0,
+                  depth: formData.palletDimensions?.depth || 0,
+                  unit: formData.palletDimensions?.unit || 'inches',
+                }
+              })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Width"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Height
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.palletDimensions?.height || ''}
+              onChange={(e) => updateFormData({
+                palletDimensions: {
+                  ...formData.palletDimensions,
+                  width: formData.palletDimensions?.width || 0,
+                  height: parseFloat(e.target.value) || 0,
+                  depth: formData.palletDimensions?.depth || 0,
+                  unit: formData.palletDimensions?.unit || 'inches',
+                }
+              })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Height"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Depth
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.palletDimensions?.depth || ''}
+              onChange={(e) => updateFormData({
+                palletDimensions: {
+                  ...formData.palletDimensions,
+                  width: formData.palletDimensions?.width || 0,
+                  height: formData.palletDimensions?.height || 0,
+                  depth: parseFloat(e.target.value) || 0,
+                  unit: formData.palletDimensions?.unit || 'inches',
+                }
+              })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Depth"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Unit
+            </label>
+            <select
+              value={formData.palletDimensions?.unit || 'inches'}
+              onChange={(e) => updateFormData({
+                palletDimensions: {
+                  ...formData.palletDimensions,
+                  width: formData.palletDimensions?.width || 0,
+                  height: formData.palletDimensions?.height || 0,
+                  depth: formData.palletDimensions?.depth || 0,
+                  unit: e.target.value,
+                }
+              })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {dimensionUnits.map(unit => (
+                <option key={unit.value} value={unit.value}>{unit.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Pallet Weight */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Pallet Weight
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.palletWeight || ''}
+            onChange={(e) => updateFormData({ palletWeight: parseFloat(e.target.value) || undefined })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter pallet weight"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Pallet Weight Unit
+          </label>
+          <select
+            value={formData.palletWeightUnit || ''}
+            onChange={(e) => updateFormData({ palletWeightUnit: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Select unit</option>
+            <option value="oz">Ounces (oz)</option>
+            <option value="g">Grams (g)</option>
+            <option value="lb">Pounds (lb)</option>
+            <option value="kg">Kilograms (kg)</option>
+            <option value="ton">Tons</option>
+          </select>
+        </div>
+      </div>
     </div>
   );
 }
