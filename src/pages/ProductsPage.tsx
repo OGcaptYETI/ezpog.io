@@ -3,14 +3,16 @@ import { useAuth } from '@/features/auth';
 import { getProductsByOrganization, createProduct, updateProduct, deleteProduct } from '@/services/firestore/products';
 import type { ProductFormData } from '@/services/firestore/products';
 import type { Product } from '@/types';
-import { Package, Plus, Search, Grid3x3, List, Filter, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Package, Plus, Search, Grid3x3, List, Filter, MoreVertical, Edit, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { ProductModal } from '@/components/products/ProductModal';
+import { useToast } from '@/shared/components/ui/toast';
 
 type ViewMode = 'grid' | 'list';
 
 export default function ProductsPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +26,11 @@ export default function ProductsPage() {
     segment: '',
     status: '' as '' | 'active' | 'inactive' | 'discontinued',
   });
+
+  // Permission checks
+  const canCreate = user?.role === 'admin' || user?.role === 'manager';
+  const canEdit = user?.role === 'admin' || user?.role === 'manager';
+  const canDelete = user?.role === 'admin' || user?.role === 'manager';
 
   useEffect(() => {
     if (user?.organizationId) {
@@ -56,30 +63,70 @@ export default function ProductsPage() {
   }
 
   const handleCreateProduct = async (productData: ProductFormData) => {
+    if (!canCreate) {
+      showToast('You do not have permission to create products', 'error');
+      return;
+    }
     if (!user?.organizationId || !user.uid || !user.displayName) return;
     
-    await createProduct(
-      productData,
-      user.organizationId,
-      user.uid,
-      user.displayName
-    );
-    await loadProducts();
+    try {
+      await createProduct(
+        productData,
+        user.organizationId,
+        user.uid,
+        user.displayName
+      );
+      await loadProducts();
+      showToast('Product created successfully', 'success');
+    } catch (error) {
+      console.error('Error creating product:', error);
+      showToast('Failed to create product. Check your permissions.', 'error');
+    }
   };
 
   const handleUpdateProduct = async (productData: ProductFormData) => {
+    if (!canEdit) {
+      showToast('You do not have permission to edit products', 'error');
+      return;
+    }
     if (!selectedProduct?.id) return;
     
-    await updateProduct(selectedProduct.id, productData);
-    await loadProducts();
-    setSelectedProduct(null);
+    try {
+      await updateProduct(selectedProduct.id, productData);
+      await loadProducts();
+      setSelectedProduct(null);
+      showToast('Product updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating product:', error);
+      showToast('Failed to update product. Check your permissions.', 'error');
+    }
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    if (!canDelete) {
+      showToast('You do not have permission to delete products', 'error');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this product?')) return;
     
-    await deleteProduct(productId);
-    await loadProducts();
+    try {
+      await deleteProduct(productId);
+      await loadProducts();
+      setOpenMenuId(null);
+      showToast('Product deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      showToast('Failed to delete product. Check your permissions.', 'error');
+    }
+  };
+
+  const handleEditClick = (product: Product) => {
+    if (!canEdit) {
+      showToast('You do not have permission to edit products', 'error');
+      return;
+    }
+    setSelectedProduct(product);
+    setShowModal(true);
     setOpenMenuId(null);
   };
 
@@ -118,10 +165,12 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Products</h1>
           <p className="text-gray-600 mt-1">Manage your product catalog</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Product
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setShowModal(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Product
+          </Button>
+        )}
       </div>
 
       {/* Filters & Search */}
@@ -221,7 +270,7 @@ export default function ProductsPage() {
               ? 'Add your first product to get started'
               : 'Try adjusting your search or filters'}
           </p>
-          {products.length === 0 && (
+          {products.length === 0 && canCreate && (
             <Button onClick={() => setShowModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Product
@@ -258,15 +307,14 @@ export default function ProductsPage() {
                   }`}>
                     {product.status || 'active'}
                   </span>
-                  <button
-                    onClick={() => {
-                      setSelectedProduct(product);
-                      setShowModal(true);
-                    }}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                  >
-                    Edit
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => handleEditClick(product)}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -356,21 +404,27 @@ export default function ProductsPage() {
                           <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border z-[101]">
                             <div className="py-1">
                               <button
-                                onClick={() => {
-                                  setSelectedProduct(product);
-                                  setShowModal(true);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                onClick={() => handleEditClick(product)}
+                                disabled={!canEdit}
+                                className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
+                                  canEdit
+                                    ? 'text-gray-700 hover:bg-gray-100'
+                                    : 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                }`}
                               >
-                                <Edit className="w-4 h-4" />
+                                {canEdit ? <Edit className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                                 Edit Product
                               </button>
                               <button
                                 onClick={() => handleDeleteProduct(product.id)}
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t"
+                                disabled={!canDelete}
+                                className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 border-t ${
+                                  canDelete
+                                    ? 'text-red-600 hover:bg-red-50'
+                                    : 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                }`}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                {canDelete ? <Trash2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                                 Delete Product
                               </button>
                             </div>
