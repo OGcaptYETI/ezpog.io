@@ -1,4 +1,4 @@
-import { ProductFormData } from '@/services/firestore/products';
+import type { ProductFormData } from '@/services/firestore/products';
 import { Package } from 'lucide-react';
 
 interface PackagingTabProps {

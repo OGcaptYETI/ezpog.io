@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ProductFormData } from '@/services/firestore/products';
+import type { ProductFormData } from '@/services/firestore/products';
 import { uploadProductImage, uploadThumbnail } from '@/services/firebase/storage';
 import { useAuth } from '@/features/auth';
 import { Image as ImageIcon, Upload, X, Loader } from 'lucide-react';

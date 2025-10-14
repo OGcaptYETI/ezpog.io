@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth';
-import { getProductsByOrganization, createProduct, updateProduct, deleteProduct, ProductFormData } from '@/services/firestore/products';
+import { getProductsByOrganization, createProduct, updateProduct, deleteProduct } from '@/services/firestore/products';
+import type { ProductFormData } from '@/services/firestore/products';
 import type { Product } from '@/types';
 import { Package, Plus, Search, Grid3x3, List, Filter, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';

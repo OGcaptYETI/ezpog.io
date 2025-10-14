@@ -1,4 +1,4 @@
-import { ProductFormData } from '@/services/firestore/products';
+import type { ProductFormData } from '@/services/firestore/products';
 import { DollarSign } from 'lucide-react';
 
 interface PricingTabProps {

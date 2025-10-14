@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
-import { ProductFormData } from '@/services/firestore/products';
+import type { ProductFormData } from '@/services/firestore/products';
 import { BasicInfoTab } from './tabs/BasicInfoTab';
 import { PricingTab } from './tabs/PricingTab';
 import { PackagingTab } from './tabs/PackagingTab';

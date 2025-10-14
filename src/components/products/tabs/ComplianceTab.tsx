@@ -1,4 +1,4 @@
-import { ProductFormData } from '@/services/firestore/products';
+import type { ProductFormData } from '@/services/firestore/products';
 import { Shield, AlertTriangle } from 'lucide-react';
 
 interface ComplianceTabProps {
