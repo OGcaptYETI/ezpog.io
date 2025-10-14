@@ -71,23 +71,23 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
         <h3 className="text-lg font-semibold text-gray-900">Product Images</h3>
       </div>
 
-      {/* Main Images Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Main Images - 3 in a Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Product Image */}
         <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
           <label className="block text-sm font-medium text-gray-900 mb-1">
             Product Image
           </label>
           <p className="text-xs text-gray-500 mb-3">
-            Main image (tiles & directory)
+            Main product image
           </p>
           
           {formData.imageUrl ? (
-            <div className="relative inline-block">
+            <div className="relative w-full">
               <img
                 src={formData.imageUrl}
                 alt="Product"
-                className="w-full aspect-square object-cover rounded-lg border-2 border-gray-300"
+                className="w-full aspect-square object-contain rounded-lg border-2 border-gray-300 bg-white"
               />
               <button
                 type="button"
@@ -110,11 +110,11 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
                 disabled={uploading === 'product'}
               />
               {uploading === 'product' ? (
-                <Loader className="w-10 h-10 text-blue-600 animate-spin" />
+                <Loader className="w-8 h-8 text-blue-600 animate-spin" />
               ) : (
                 <>
-                  <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-600 font-medium">Upload Image</span>
+                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-xs text-gray-600 font-medium">Upload</span>
                 </>
               )}
             </label>
@@ -124,18 +124,18 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
         {/* SKU Image */}
         <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
           <label className="block text-sm font-medium text-gray-900 mb-1">
-            SKU Image (Planogram)
+            SKU Image
           </label>
           <p className="text-xs text-gray-500 mb-3">
-            Used on planogram fixtures
+            Planogram fixture image
           </p>
           
           {formData.skuImageUrl ? (
-            <div className="relative inline-block">
+            <div className="relative w-full">
               <img
                 src={formData.skuImageUrl}
                 alt="SKU"
-                className="w-full aspect-square object-cover rounded-lg border-2 border-gray-300"
+                className="w-full aspect-square object-contain rounded-lg border-2 border-gray-300 bg-white"
               />
               <button
                 type="button"
@@ -158,64 +158,64 @@ export function ImagesTab({ formData, updateFormData }: ImagesTabProps) {
                 disabled={uploading === 'sku'}
               />
               {uploading === 'sku' ? (
-                <Loader className="w-10 h-10 text-blue-600 animate-spin" />
+                <Loader className="w-8 h-8 text-blue-600 animate-spin" />
               ) : (
                 <>
-                  <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-600 font-medium">Upload SKU Image</span>
+                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-xs text-gray-600 font-medium">Upload</span>
                 </>
               )}
             </label>
           )}
         </div>
-      </div>
 
-      {/* Thumbnail */}
-      <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-        <label className="block text-sm font-medium text-gray-900 mb-1">
-          Thumbnail
-        </label>
-        <p className="text-xs text-gray-500 mb-3">
-          Small preview (auto-compressed to 200x200)
-        </p>
-        
-        {formData.thumbnailUrl ? (
-          <div className="relative inline-block">
-            <img
-              src={formData.thumbnailUrl}
-              alt="Thumbnail"
-              className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300"
-            />
-            <button
-              type="button"
-              onClick={() => updateFormData({ thumbnailUrl: undefined })}
-              className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        ) : (
-          <label className="inline-flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(file, 'thumbnail');
-              }}
-              className="hidden"
-              disabled={uploading === 'thumbnail'}
-            />
-            {uploading === 'thumbnail' ? (
-              <Loader className="w-6 h-6 text-blue-600 animate-spin" />
-            ) : (
-              <>
-                <Upload className="w-6 h-6 text-gray-400 mb-1" />
-                <span className="text-xs text-gray-600 font-medium">Upload</span>
-              </>
-            )}
+        {/* Thumbnail */}
+        <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+          <label className="block text-sm font-medium text-gray-900 mb-1">
+            Thumbnail
           </label>
-        )}
+          <p className="text-xs text-gray-500 mb-3">
+            Small preview (200x200)
+          </p>
+          
+          {formData.thumbnailUrl ? (
+            <div className="relative w-full">
+              <img
+                src={formData.thumbnailUrl}
+                alt="Thumbnail"
+                className="w-full aspect-square object-contain rounded-lg border-2 border-gray-300 bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => updateFormData({ thumbnailUrl: undefined })}
+                className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file, 'thumbnail');
+                }}
+                className="hidden"
+                disabled={uploading === 'thumbnail'}
+              />
+              {uploading === 'thumbnail' ? (
+                <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-xs text-gray-600 font-medium">Upload</span>
+                </>
+              )}
+            </label>
+          )}
+        </div>
       </div>
 
       {/* Additional Images */}
