@@ -13,53 +13,79 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import type { Product } from '@/types';
 
 /**
  * Product Firestore Service
- * Handles all product CRUD operations
+ * Handles all product CRUD operations with comprehensive CPG industry support
  */
 
-export interface ProductData {
-  id?: string;
-  productId?: string;           // Custom product ID (optional)
-  
-  // Basic Info
-  name: string;
-  brand: string;
-  brandFamily: string | null;
+// For backward compatibility and easier form handling
+export interface ProductFormData {
+  // Core Identification
+  productId: string;
   upc: string;
+  ean?: string;
+  gtin?: string;
   
-  // Classification
+  // Basic Information
+  name: string;
+  description?: string;
+  brand: string;
+  brandFamily?: string;
+  manufacturer?: string;
+  company?: string;
+  
+  // Categorization
   category: string;
-  packagingTypeId: string | null;
+  subCategory?: string;
+  department?: string;
+  segment?: string;
   
-  // Dimensions
-  dimensions: {
+  // Packaging & Dimensions
+  packagingTypeId?: string;
+  packagingType?: string;
+  unitSize?: number;
+  unitOfMeasure?: string;
+  unitsPerCase?: number;
+  caseDimensions?: {
     width: number;
     height: number;
     depth: number;
-    unit: 'inches' | 'cm';
-    weight: number | null;
-    weightUnit: 'oz' | 'g' | null;
-  } | null;
+    unit: string;
+  };
+  weight?: number;
+  weightUnit?: string;
   
-  // Visual
-  imageUrl: string | null;
-  images: string[];
+  // Pricing
+  retailPrice?: number;
+  wholesalePrice?: number;
+  costPrice?: number;
+  currency?: string;
   
-  // Ownership
-  organizationId: string;
-  userId: string;               // Creator (for backward compatibility)
+  // Images
+  imageUrl?: string;
+  skuImageUrl?: string;
+  thumbnailUrl?: string;
+  additionalImages?: string[];
+  
+  // Compliance
+  ingredients?: string;
+  allergens?: string[];
+  nutritionFacts?: Record<string, unknown>;
+  certifications?: string[];
+  warnings?: string[];
+  
+  // Inventory
+  inStock?: boolean;
+  stockLevel?: number;
+  reorderPoint?: number;
+  status?: 'active' | 'inactive' | 'discontinued';
   
   // Metadata
-  sku: string | null;
-  description: string | null;
-  tags: string[];
-  metadata: Record<string, unknown>;
-  
-  // Timestamps
-  createdAt: Date;
-  updatedAt: Date;
+  tags?: string[];
+  notes?: string;
+  projects?: string[];
 }
 
 const COLLECTION_NAME = 'products';
@@ -67,9 +93,18 @@ const COLLECTION_NAME = 'products';
 /**
  * Create a new product
  */
-export async function createProduct(data: Omit<ProductData, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+export async function createProduct(
+  data: ProductFormData,
+  organizationId: string,
+  userId: string,
+  createdBy: string
+): Promise<string> {
   const productData = {
     ...data,
+    organizationId,
+    userId,
+    createdBy,
+    status: data.status || 'active',
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
   };
@@ -81,7 +116,7 @@ export async function createProduct(data: Omit<ProductData, 'id' | 'createdAt' |
 /**
  * Get a product by ID
  */
-export async function getProduct(id: string): Promise<ProductData | null> {
+export async function getProduct(id: string): Promise<Product | null> {
   const docRef = doc(db, COLLECTION_NAME, id);
   const docSnap = await getDoc(docRef);
   
@@ -89,9 +124,7 @@ export async function getProduct(id: string): Promise<ProductData | null> {
     return {
       id: docSnap.id,
       ...docSnap.data(),
-      createdAt: docSnap.data().createdAt?.toDate(),
-      updatedAt: docSnap.data().updatedAt?.toDate(),
-    } as ProductData;
+    } as Product;
   }
   
   return null;
@@ -100,9 +133,10 @@ export async function getProduct(id: string): Promise<ProductData | null> {
 /**
  * Get product by UPC
  */
-export async function getProductByUPC(upc: string): Promise<ProductData | null> {
+export async function getProductByUPC(upc: string, organizationId: string): Promise<Product | null> {
   const q = query(
     collection(db, COLLECTION_NAME),
+    where('organizationId', '==', organizationId),
     where('upc', '==', upc),
     limit(1)
   );
@@ -112,13 +146,11 @@ export async function getProductByUPC(upc: string): Promise<ProductData | null> 
     return null;
   }
   
-  const doc = querySnapshot.docs[0];
+  const docSnap = querySnapshot.docs[0];
   return {
-    id: doc.id,
-    ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate(),
-    updatedAt: doc.data().updatedAt?.toDate(),
-  } as ProductData;
+    id: docSnap.id,
+    ...docSnap.data(),
+  } as Product;
 }
 
 /**
@@ -126,30 +158,44 @@ export async function getProductByUPC(upc: string): Promise<ProductData | null> 
  */
 export async function getProductsByOrganization(
   organizationId: string,
-  category?: string
-): Promise<ProductData[]> {
+  filters?: {
+    category?: string;
+    brand?: string;
+    segment?: string;
+    status?: 'active' | 'inactive' | 'discontinued';
+  }
+): Promise<Product[]> {
   let q = query(
     collection(db, COLLECTION_NAME),
     where('organizationId', '==', organizationId),
     orderBy('name', 'asc')
   );
   
-  if (category) {
-    q = query(
-      collection(db, COLLECTION_NAME),
-      where('organizationId', '==', organizationId),
-      where('category', '==', category),
-      orderBy('name', 'asc')
-    );
-  }
-  
+  // Note: Firestore only allows one inequality per query
+  // For complex filtering, fetch all and filter client-side
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
+  let products = querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate(),
-    updatedAt: doc.data().updatedAt?.toDate(),
-  } as ProductData));
+  } as Product));
+  
+  // Client-side filtering
+  if (filters) {
+    if (filters.category) {
+      products = products.filter(p => p.category === filters.category);
+    }
+    if (filters.brand) {
+      products = products.filter(p => p.brand === filters.brand);
+    }
+    if (filters.segment) {
+      products = products.filter(p => p.segment === filters.segment);
+    }
+    if (filters.status) {
+      products = products.filter(p => p.status === filters.status);
+    }
+  }
+  
+  return products;
 }
 
 /**
@@ -158,7 +204,7 @@ export async function getProductsByOrganization(
 export async function getProductsByBrand(
   organizationId: string,
   brand: string
-): Promise<ProductData[]> {
+): Promise<Product[]> {
   const q = query(
     collection(db, COLLECTION_NAME),
     where('organizationId', '==', organizationId),
@@ -170,18 +216,16 @@ export async function getProductsByBrand(
   return querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate(),
-    updatedAt: doc.data().updatedAt?.toDate(),
-  } as ProductData));
+  } as Product));
 }
 
 /**
- * Search products by name
+ * Search products by name, brand, UPC, or SKU
  */
 export async function searchProducts(
   organizationId: string,
   searchTerm: string
-): Promise<ProductData[]> {
+): Promise<Product[]> {
   // Note: Firestore doesn't support full-text search natively
   // This is a basic implementation - consider using Algolia or similar for production
   const q = query(
@@ -194,24 +238,24 @@ export async function searchProducts(
   const products = querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate(),
-    updatedAt: doc.data().updatedAt?.toDate(),
-  } as ProductData));
+  } as Product));
   
-  // Client-side filtering (temporary solution)
+  // Client-side filtering
   const lowerSearch = searchTerm.toLowerCase();
   return products.filter(p => 
     p.name.toLowerCase().includes(lowerSearch) ||
     p.brand.toLowerCase().includes(lowerSearch) ||
     p.upc.includes(searchTerm) ||
-    (p.sku && p.sku.toLowerCase().includes(lowerSearch))
+    (p.productId && p.productId.toLowerCase().includes(lowerSearch)) ||
+    (p.ean && p.ean.includes(searchTerm)) ||
+    (p.gtin && p.gtin.includes(searchTerm))
   );
 }
 
 /**
  * Update a product
  */
-export async function updateProduct(id: string, data: Partial<ProductData>): Promise<void> {
+export async function updateProduct(id: string, data: Partial<ProductFormData>): Promise<void> {
   const docRef = doc(db, COLLECTION_NAME, id);
   await updateDoc(docRef, {
     ...data,
@@ -228,13 +272,18 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 /**
- * Bulk create products
+ * Bulk create products (for CSV import)
  */
-export async function bulkCreateProducts(products: Array<Omit<ProductData, 'id' | 'createdAt' | 'updatedAt'>>): Promise<string[]> {
+export async function bulkCreateProducts(
+  products: ProductFormData[],
+  organizationId: string,
+  userId: string,
+  createdBy: string
+): Promise<string[]> {
   const ids: string[] = [];
   
   for (const product of products) {
-    const id = await createProduct(product);
+    const id = await createProduct(product, organizationId, userId, createdBy);
     ids.push(id);
   }
   
