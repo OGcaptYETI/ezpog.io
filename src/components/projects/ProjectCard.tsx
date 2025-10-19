@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Project } from '@/types';
 import { MoreVertical, Edit, Trash2, Lock, Calendar, Users, TrendingUp } from 'lucide-react';
 
@@ -25,10 +26,15 @@ export function ProjectCard({
   getStatusColor,
   getPriorityColor,
 }: ProjectCardProps) {
+  const navigate = useNavigate();
   const [openMenu, setOpenMenu] = useState(false);
 
+  const handleCardClick = () => {
+    navigate(`/dashboard/projects/${project.id}`);
+  };
+
   const ActionsMenu = () => (
-    <div className="relative">
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
       <button
         onClick={() => setOpenMenu(!openMenu)}
         className="p-1 hover:bg-gray-100 rounded"
@@ -79,7 +85,10 @@ export function ProjectCard({
 
   if (viewMode === 'grid') {
     return (
-      <div className="bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 flex flex-col h-[440px]">
+      <div 
+        onClick={handleCardClick}
+        className="bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 flex flex-col h-[440px] cursor-pointer"
+      >
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
@@ -161,7 +170,10 @@ export function ProjectCard({
 
   // LIST VIEW - Horizontal Layout
   return (
-    <div className="bg-white rounded-lg shadow hover:shadow-lg transition-all p-4 flex items-center gap-4">
+    <div 
+      onClick={handleCardClick}
+      className="bg-white rounded-lg shadow hover:shadow-lg transition-all p-4 flex items-center gap-4 cursor-pointer"
+    >
       {/* Left: Name & Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-2">
