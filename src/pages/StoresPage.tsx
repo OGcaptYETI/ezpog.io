@@ -15,6 +15,7 @@ export default function StoresPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState<'all' | 'storeName' | 'storeId' | 'storeNumber' | 'city' | 'state'>('all');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
   // Sorting state
@@ -141,13 +142,26 @@ export default function StoresPage() {
 
   // Filter and sort stores
   const filteredStores = useMemo(() => {
-    let filtered = stores.filter(s => {
-      // Search filter
-      const matchesSearch = s.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          s.storeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (s.storeNumber && s.storeNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          s.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          s.state.toLowerCase().includes(searchTerm.toLowerCase());
+    const filtered = stores.filter(s => {
+      // Search filter - field-specific or all fields
+      let matchesSearch = false;
+      
+      if (!searchTerm) {
+        matchesSearch = true; // No search term, show all
+      } else if (searchField === 'all') {
+        // Search across all fields
+        matchesSearch = s.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       s.storeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       (s.storeNumber && s.storeNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                       s.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       s.state.toLowerCase().includes(searchTerm.toLowerCase());
+      } else {
+        // Search in specific field only
+        const fieldValue = s[searchField];
+        if (fieldValue) {
+          matchesSearch = fieldValue.toString().toLowerCase().includes(searchTerm.toLowerCase());
+        }
+      }
       
       if (!matchesSearch) return false;
       
@@ -181,7 +195,7 @@ export default function StoresPage() {
     });
 
     return filtered;
-  }, [stores, searchTerm, filterRegion, filterState, filterFormat, filterActive, sortField, sortDirection]);
+  }, [stores, searchTerm, searchField, filterRegion, filterState, filterFormat, filterActive, sortField, sortDirection]);
 
   if (loading) {
     return (
@@ -258,16 +272,37 @@ export default function StoresPage() {
       {/* Search Bar and Filters */}
       <div className="mb-6 space-y-4">
         <div className="flex items-center gap-4">
+          {/* Search Field Selector */}
+          <select
+            value={searchField}
+            onChange={(e) => setSearchField(e.target.value as typeof searchField)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white text-sm font-medium"
+          >
+            <option value="all">All Fields</option>
+            <option value="storeId">Store ID Only</option>
+            <option value="storeName">Store Name Only</option>
+            <option value="storeNumber">Store Number Only</option>
+            <option value="city">City Only</option>
+            <option value="state">State Only</option>
+          </select>
+
+          {/* Search Input */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search stores by name, ID, number, city, or state..."
+              placeholder={
+                searchField === 'all' 
+                  ? "Search stores by name, ID, number, city, or state..." 
+                  : `Search by ${searchField === 'storeId' ? 'Store ID' : searchField === 'storeName' ? 'Store Name' : searchField === 'storeNumber' ? 'Store Number' : searchField === 'city' ? 'City' : 'State'}...`
+              }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
+
+          {/* Filters Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
