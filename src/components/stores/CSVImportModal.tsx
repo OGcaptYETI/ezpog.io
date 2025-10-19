@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Upload, Download, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/features/auth';
-import { bulkImportStores, type CSVStoreData } from '@/services/firestore/stores';
+import { bulkImportStores, type CSVStoreData, type ImportMode, type AutoGenerateConfig } from '@/services/firestore/stores';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVFieldMapper, type FieldMapping, type CustomFieldMapping } from './CSVFieldMapper';
@@ -23,11 +23,15 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
   const [csvData, setCsvData] = useState<Record<string, string>[]>([]);
   const [fieldMapping, setFieldMapping] = useState<FieldMapping>({});
   const [customFieldMappings, setCustomFieldMappings] = useState<CustomFieldMapping[]>([]);
+  const [autoGenConfig, setAutoGenConfig] = useState<AutoGenerateConfig | undefined>();
+  const [importMode, setImportMode] = useState<ImportMode>('create-new');
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<CSVStoreData[]>([]);
   const [importResult, setImportResult] = useState<{
     success: number;
     failed: number;
+    skipped: number;
+    updated: number;
     errors: string[];
   } | null>(null);
 
@@ -70,9 +74,10 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
     setCsvData(allData);
   };
 
-  const handleMappingComplete = (mapping: FieldMapping, customMappings?: CustomFieldMapping[]) => {
+  const handleMappingComplete = (mapping: FieldMapping, customMappings?: CustomFieldMapping[], autoConfig?: AutoGenerateConfig) => {
     setFieldMapping(mapping);
     setCustomFieldMappings(customMappings || []);
+    setAutoGenConfig(autoConfig);
     generatePreview(mapping, customMappings || []);
     setStep('preview');
   };
@@ -138,7 +143,9 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
         stores,
         user.organizationId,
         user.uid,
-        user.displayName || user.email || 'Unknown'
+        user.displayName || user.email || 'Unknown',
+        importMode,
+        autoGenConfig
       );
       
       setImportResult(result);
@@ -339,6 +346,52 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
                 </table>
               </div>
 
+              {/* Import Mode Selection */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-blue-900 mb-2">Import Mode:</h4>
+                <div className="space-y-2">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="create-new"
+                      checked={importMode === 'create-new'}
+                      onChange={(e) => setImportMode(e.target.value as ImportMode)}
+                      className="w-4 h-4 text-blue-600 mt-0.5"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-blue-900">Create New (Allow Duplicates)</span>
+                      <p className="text-xs text-blue-700">Import all stores, even if Store IDs already exist</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="skip"
+                      checked={importMode === 'skip'}
+                      onChange={(e) => setImportMode(e.target.value as ImportMode)}
+                      className="w-4 h-4 text-blue-600 mt-0.5"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-blue-900">Skip Duplicates</span>
+                      <p className="text-xs text-blue-700">Skip stores with existing Store IDs (keeps original data)</p>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="update"
+                      checked={importMode === 'update'}
+                      onChange={(e) => setImportMode(e.target.value as ImportMode)}
+                      className="w-4 h-4 text-blue-600 mt-0.5"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-blue-900">Update Existing</span>
+                      <p className="text-xs text-blue-700">Update stores with existing Store IDs (merges new data)</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <div className="bg-green-50 border-2 border-green-400 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
@@ -390,14 +443,34 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
               <div className="text-center py-8">
                 <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Import Complete!</h3>
-                <p className="text-gray-600">
-                  Successfully imported {importResult.success} stores
-                </p>
-                {importResult.failed > 0 && (
-                  <p className="text-red-600 mt-2">
-                    {importResult.failed} stores failed to import
-                  </p>
-                )}
+                
+                {/* Results Summary */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 max-w-2xl mx-auto">
+                  {importResult.success > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <p className="text-3xl font-bold text-green-600">{importResult.success}</p>
+                      <p className="text-sm text-green-900 font-medium">Created</p>
+                    </div>
+                  )}
+                  {importResult.updated > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-3xl font-bold text-blue-600">{importResult.updated}</p>
+                      <p className="text-sm text-blue-900 font-medium">Updated</p>
+                    </div>
+                  )}
+                  {importResult.skipped > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-3xl font-bold text-yellow-600">{importResult.skipped}</p>
+                      <p className="text-sm text-yellow-900 font-medium">Skipped</p>
+                    </div>
+                  )}
+                  {importResult.failed > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <p className="text-3xl font-bold text-red-600">{importResult.failed}</p>
+                      <p className="text-sm text-red-900 font-medium">Failed</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {importResult.errors.length > 0 && (

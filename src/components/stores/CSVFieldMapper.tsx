@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ArrowRight, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
+import { ArrowRight, AlertCircle, CheckCircle2, Plus, Wand2 } from 'lucide-react';
 import type { CustomFieldDefinition } from '@/types';
 import { AddCustomFieldModal } from './AddCustomFieldModal';
+import type { AutoGenerateConfig } from '@/services/firestore/stores';
 
 export interface FieldMapping {
   [csvColumn: string]: string; // Maps CSV column name to system field name (or custom field ID)
@@ -44,7 +45,7 @@ export const SYSTEM_FIELDS: SystemField[] = [
 
 interface CSVFieldMapperProps {
   csvHeaders: string[];
-  onMappingComplete: (mapping: FieldMapping, customFields?: CustomFieldMapping[]) => void;
+  onMappingComplete: (mapping: FieldMapping, customFields?: CustomFieldMapping[], autoGenConfig?: AutoGenerateConfig) => void;
   sampleData?: Record<string, string>; // First row of data for preview
   existingCustomFields?: CustomFieldDefinition[];
   initialMapping?: FieldMapping; // Preserve mapping when going back
@@ -68,6 +69,14 @@ export function CSVFieldMapper({
   });
   
   const [isAddFieldModalOpen, setIsAddFieldModalOpen] = useState(false);
+  
+  // Auto-generate Store ID state
+  const [autoGenerateEnabled, setAutoGenerateEnabled] = useState(false);
+  const [autoGenFormat, setAutoGenFormat] = useState<'simple' | 'prefix' | 'suffix'>('prefix');
+  const [autoGenPrefix, setAutoGenPrefix] = useState('');
+  const [autoGenSuffix, setAutoGenSuffix] = useState('');
+  const [autoGenPadding, setAutoGenPadding] = useState(4);
+  
   const [mapping, setMapping] = useState<FieldMapping>(() => {
     // If we have initial mapping (user went back), use it
     if (initialMapping && Object.keys(initialMapping).length > 0) {
@@ -163,7 +172,37 @@ export function CSVFieldMapper({
       }
     });
     
-    onMappingComplete(mapping, customFieldMappings.length > 0 ? customFieldMappings : undefined);
+    // Build auto-generate config if enabled
+    const autoGenConfig: AutoGenerateConfig | undefined = autoGenerateEnabled ? {
+      enabled: true,
+      format: autoGenFormat,
+      prefix: autoGenFormat === 'prefix' ? autoGenPrefix : undefined,
+      suffix: autoGenFormat === 'suffix' ? autoGenSuffix : undefined,
+      padding: autoGenPadding,
+      startNumber: 1,
+    } : undefined;
+    
+    onMappingComplete(
+      mapping, 
+      customFieldMappings.length > 0 ? customFieldMappings : undefined,
+      autoGenConfig
+    );
+  };
+  
+  // Helper to generate preview of auto-generated IDs
+  const generatePreviewId = (index: number): string => {
+    const num = 1 + index;
+    const paddedNum = String(num).padStart(autoGenPadding, '0');
+    
+    switch (autoGenFormat) {
+      case 'prefix':
+        return autoGenPrefix ? `${autoGenPrefix}-${paddedNum}` : paddedNum;
+      case 'suffix':
+        return autoGenSuffix ? `${paddedNum}-${autoGenSuffix}` : paddedNum;
+      case 'simple':
+      default:
+        return paddedNum;
+    }
   };
 
   const requiredStatus = getRequiredFieldsStatus();
@@ -199,6 +238,122 @@ export function CSVFieldMapper({
           </div>
         </div>
       </div>
+
+      {/* Auto-Generate Store IDs */}
+      {!getMappedFields().includes('storeId') && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Wand2 className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="auto-generate"
+                  checked={autoGenerateEnabled}
+                  onChange={(e) => setAutoGenerateEnabled(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <label htmlFor="auto-generate" className="text-sm font-semibold text-indigo-900 cursor-pointer">
+                  Auto-generate Store IDs (no Store ID column in your CSV?)
+                </label>
+              </div>
+
+              {autoGenerateEnabled && (
+                <div className="space-y-3 pl-6">
+                  {/* Format Selection */}
+                  <div>
+                    <label className="block text-xs font-medium text-indigo-900 mb-1">Format</label>
+                    <div className="flex gap-3">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="simple"
+                          checked={autoGenFormat === 'simple'}
+                          onChange={() => setAutoGenFormat('simple')}
+                          className="w-4 h-4 text-indigo-600"
+                        />
+                        <span className="text-sm text-indigo-800">Simple (1, 2, 3...)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="prefix"
+                          checked={autoGenFormat === 'prefix'}
+                          onChange={() => setAutoGenFormat('prefix')}
+                          className="w-4 h-4 text-indigo-600"
+                        />
+                        <span className="text-sm text-indigo-800">Prefix</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="suffix"
+                          checked={autoGenFormat === 'suffix'}
+                          onChange={() => setAutoGenFormat('suffix')}
+                          className="w-4 h-4 text-indigo-600"
+                        />
+                        <span className="text-sm text-indigo-800">Suffix</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Prefix/Suffix Input */}
+                  {autoGenFormat === 'prefix' && (
+                    <div>
+                      <label className="block text-xs font-medium text-indigo-900 mb-1">Prefix</label>
+                      <input
+                        type="text"
+                        value={autoGenPrefix}
+                        onChange={(e) => setAutoGenPrefix(e.target.value.toUpperCase())}
+                        placeholder="e.g., MAVERIK, 7-11, WALGREENS"
+                        className="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {autoGenFormat === 'suffix' && (
+                    <div>
+                      <label className="block text-xs font-medium text-indigo-900 mb-1">Suffix</label>
+                      <input
+                        type="text"
+                        value={autoGenSuffix}
+                        onChange={(e) => setAutoGenSuffix(e.target.value.toUpperCase())}
+                        placeholder="e.g., MAVERIK, STORE, LOCATION"
+                        className="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {/* Padding */}
+                  <div>
+                    <label className="block text-xs font-medium text-indigo-900 mb-1">Number Padding</label>
+                    <select
+                      value={autoGenPadding}
+                      onChange={(e) => setAutoGenPadding(Number(e.target.value))}
+                      className="w-48 px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                    >
+                      <option value={1}>1 digit (1-9)</option>
+                      <option value={2}>2 digits (01-99)</option>
+                      <option value={3}>3 digits (001-999)</option>
+                      <option value={4}>4 digits (0001-9999)</option>
+                      <option value={5}>5 digits (00001-99999)</option>
+                      <option value={6}>6 digits (000001-999999)</option>
+                    </select>
+                  </div>
+
+                  {/* Preview */}
+                  <div className="bg-white border border-indigo-200 rounded p-2">
+                    <p className="text-xs font-medium text-indigo-900 mb-1">Preview:</p>
+                    <p className="text-sm text-indigo-700 font-mono">
+                      {generatePreviewId(0)}, {generatePreviewId(1)}, {generatePreviewId(2)}...
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Field Mappings */}
       <div className="space-y-3">
