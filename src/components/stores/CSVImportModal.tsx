@@ -78,6 +78,13 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
     setFieldMapping(mapping);
     setCustomFieldMappings(customMappings || []);
     setAutoGenConfig(autoConfig);
+    
+    // Force "Create New" mode when auto-generating IDs
+    // (Skip/Update modes don't work with auto-generated IDs)
+    if (autoConfig) {
+      setImportMode('create-new');
+    }
+    
     generatePreview(mapping, customMappings || []);
     setStep('preview');
   };
@@ -349,6 +356,23 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
               {/* Import Mode Selection */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="text-sm font-semibold text-blue-900 mb-2">Import Mode:</h4>
+                
+                {/* Warning if auto-generate is enabled */}
+                {autoGenConfig && (
+                  <div className="bg-red-50 border border-red-300 rounded-lg p-3 mb-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-red-900">
+                        <p className="font-semibold">Auto-generated IDs detected!</p>
+                        <p className="mt-1">
+                          Since you're auto-generating Store IDs, "Skip" and "Update" modes won't work 
+                          (the new IDs won't match existing stores). Only "Create New" mode is available.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
@@ -363,30 +387,38 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
                       <p className="text-xs text-blue-700">Import all stores, even if Store IDs already exist</p>
                     </div>
                   </label>
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  <label className={`flex items-start gap-3 ${autoGenConfig ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                     <input
                       type="radio"
                       value="skip"
                       checked={importMode === 'skip'}
-                      onChange={(e) => setImportMode(e.target.value as ImportMode)}
+                      onChange={(e) => !autoGenConfig && setImportMode(e.target.value as ImportMode)}
+                      disabled={!!autoGenConfig}
                       className="w-4 h-4 text-blue-600 mt-0.5"
                     />
                     <div>
                       <span className="text-sm font-medium text-blue-900">Skip Duplicates</span>
-                      <p className="text-xs text-blue-700">Skip stores with existing Store IDs (keeps original data)</p>
+                      <p className="text-xs text-blue-700">
+                        Skip stores with existing Store IDs (keeps original data)
+                        {autoGenConfig && ' - Disabled with auto-generate'}
+                      </p>
                     </div>
                   </label>
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  <label className={`flex items-start gap-3 ${autoGenConfig ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                     <input
                       type="radio"
                       value="update"
                       checked={importMode === 'update'}
-                      onChange={(e) => setImportMode(e.target.value as ImportMode)}
+                      onChange={(e) => !autoGenConfig && setImportMode(e.target.value as ImportMode)}
+                      disabled={!!autoGenConfig}
                       className="w-4 h-4 text-blue-600 mt-0.5"
                     />
                     <div>
                       <span className="text-sm font-medium text-blue-900">Update Existing</span>
-                      <p className="text-xs text-blue-700">Update stores with existing Store IDs (merges new data)</p>
+                      <p className="text-xs text-blue-700">
+                        Update stores with existing Store IDs (merges new data)
+                        {autoGenConfig && ' - Disabled with auto-generate'}
+                      </p>
                     </div>
                   </label>
                 </div>
