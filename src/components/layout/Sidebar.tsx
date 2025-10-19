@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard,
   FolderKanban,
+  Building2,
   Package,
   Grid3x3,
   PackageSearch,
@@ -24,6 +25,7 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+  { name: 'Stores', href: '/dashboard/stores', icon: Building2 },
   { name: 'Planograms', href: '/dashboard/planograms', icon: Grid3x3 },
   { name: 'Products', href: '/dashboard/products', icon: Package },
   { name: 'Inventory', href: '/dashboard/inventory', icon: PackageSearch },
