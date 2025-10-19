@@ -339,21 +339,47 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
                 </table>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-900">
-                  <strong>Ready to import {csvData.length} stores</strong>
-                  <br />
-                  This may take a few moments. Please don't close this window during import.
-                </p>
+              <div className="bg-green-50 border-2 border-green-400 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-base font-semibold text-green-900 mb-1">
+                      ✓ Ready to Import {csvData.length} Stores
+                    </p>
+                    <p className="text-sm text-green-800">
+                      Data looks good! Click the green button below to start the import.
+                      <br />
+                      <span className="text-xs">This may take 1-2 minutes. Please don't close this window.</span>
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3">
-                <Button onClick={() => setStep('mapping')} variant="outline">
+                <button
+                  onClick={() => setStep('mapping')}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={importing}
+                >
                   Back to Mapping
-                </Button>
-                <Button onClick={handleImport} disabled={importing}>
-                  {importing ? 'Importing...' : `Import ${csvData.length} Stores`}
-                </Button>
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={importing}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+                >
+                  {importing ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Importing {csvData.length} Stores...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5" />
+                      Import {csvData.length} Stores
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
