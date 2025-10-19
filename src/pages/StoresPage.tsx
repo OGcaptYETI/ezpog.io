@@ -36,6 +36,7 @@ export default function StoresPage() {
 
   // RBAC permissions
   const canCreate = user?.role === 'admin' || user?.role === 'manager';
+  const canDelete = user?.role === 'admin'; // Only admins can delete stores
 
   useEffect(() => {
     loadStores();
@@ -204,7 +205,7 @@ export default function StoresPage() {
           </div>
           {canCreate && (
             <div className="flex gap-3">
-              {stores.length > 0 && (
+              {canDelete && stores.length > 0 && (
                 <Button 
                   onClick={() => setShowDeleteAllModal(true)} 
                   variant="outline"
@@ -227,8 +228,8 @@ export default function StoresPage() {
         </div>
       </div>
 
-      {/* Bulk Actions Toolbar */}
-      {selectedStores.size > 0 && (
+      {/* Bulk Actions Toolbar - Only visible to admins */}
+      {canDelete && selectedStores.size > 0 && (
         <div className="mb-6 bg-indigo-50 border-2 border-indigo-300 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -426,15 +427,17 @@ export default function StoresPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {/* Select All Checkbox */}
-                <th className="px-6 py-3">
-                  <input
-                    type="checkbox"
-                    checked={filteredStores.length > 0 && selectedStores.size === filteredStores.length}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 text-indigo-600 rounded"
-                  />
-                </th>
+                {/* Select All Checkbox - Admin Only */}
+                {canDelete && (
+                  <th className="px-6 py-3">
+                    <input
+                      type="checkbox"
+                      checked={filteredStores.length > 0 && selectedStores.size === filteredStores.length}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                  </th>
+                )}
 
                 {/* Sortable Store Column */}
                 <th 
@@ -506,15 +509,17 @@ export default function StoresPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredStores.map((store) => (
                 <tr key={store.id} className="hover:bg-gray-50">
-                  {/* Checkbox Cell */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={selectedStores.has(store.id)}
-                      onChange={() => handleToggleSelect(store.id)}
-                      className="w-4 h-4 text-indigo-600 rounded"
-                    />
-                  </td>
+                  {/* Checkbox Cell - Admin Only */}
+                  {canDelete && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedStores.has(store.id)}
+                        onChange={() => handleToggleSelect(store.id)}
+                        className="w-4 h-4 text-indigo-600 rounded"
+                      />
+                    </td>
+                  )}
 
                   {/* Store Info Cell */}
                   <td className="px-6 py-4 whitespace-nowrap">
