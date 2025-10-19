@@ -5,6 +5,7 @@ import type { Project } from '@/types';
 import { FolderKanban, Plus, Search, Grid3x3, List, Filter, MoreVertical, Edit, Trash2, Lock, Calendar, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
+import { ProjectModal } from '@/components/projects/ProjectModal';
 
 type ViewMode = 'grid' | 'list';
 
@@ -21,6 +22,11 @@ export default function ProjectsPage() {
     projectType: '' as '' | 'reset' | 'refresh' | 'new_store' | 'seasonal' | 'remodel' | 'compliance_check' | 'emergency',
     priority: '' as '' | 'low' | 'medium' | 'high' | 'urgent',
   });
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
 
   // Permission checks
   const canCreate = user?.role === 'admin' || user?.role === 'manager';
@@ -56,6 +62,23 @@ export default function ProjectsPage() {
     }
   }
 
+  const handleCreateProject = () => {
+    setModalMode('create');
+    setSelectedProject(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleEditProject = (project: Project) => {
+    if (!canEdit) {
+      showToast('You do not have permission to edit projects', 'error');
+      return;
+    }
+    setModalMode('edit');
+    setSelectedProject(project);
+    setIsModalOpen(true);
+    setOpenMenuId(null);
+  };
+
   const handleDelete = async (projectId: string) => {
     if (!canDelete) {
       showToast('You do not have permission to delete projects', 'error');
@@ -72,6 +95,10 @@ export default function ProjectsPage() {
       console.error('Error deleting project:', error);
       showToast('Failed to delete project. Check your permissions.', 'error');
     }
+  };
+
+  const handleModalSave = async () => {
+    await loadProjects();
   };
 
   const filteredProjects = projects.filter(p =>
@@ -129,7 +156,7 @@ export default function ProjectsPage() {
         </div>
         <div className="flex gap-3">
           {canCreate ? (
-            <Button onClick={() => showToast('Project creation modal coming soon!', 'info')}>
+            <Button onClick={handleCreateProject}>
               <Plus className="w-4 h-4 mr-2" />
               New Project
             </Button>
@@ -189,7 +216,7 @@ export default function ProjectsPage() {
               : 'Try adjusting your search or filters'}
           </p>
           {canCreate && projects.length === 0 && (
-            <Button onClick={() => showToast('Project creation modal coming soon!', 'info')}>
+            <Button onClick={handleCreateProject}>
               <Plus className="w-4 h-4 mr-2" />
               Create Project
             </Button>
@@ -223,7 +250,7 @@ export default function ProjectsPage() {
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                       {canEdit ? (
                         <button
-                          onClick={() => showToast('Edit modal coming soon!', 'info')}
+                          onClick={() => handleEditProject(project)}
                           className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
                         >
                           <Edit className="w-4 h-4" />
@@ -328,6 +355,15 @@ export default function ProjectsPage() {
           ))}
         </div>
       )}
+
+      {/* Project Modal */}
+      <ProjectModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleModalSave}
+        project={selectedProject}
+        mode={modalMode}
+      />
     </div>
   );
 }
