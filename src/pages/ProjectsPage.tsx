@@ -101,6 +101,19 @@ export default function ProjectsPage() {
     await loadProjects();
   };
 
+  // Helper to safely format dates from Firestore Timestamps
+  const formatDate = (value: any): string => {
+    if (!value) return 'N/A';
+    try {
+      if (value instanceof Date) return value.toLocaleDateString();
+      if (value.toDate && typeof value.toDate === 'function') return value.toDate().toLocaleDateString();
+      if (value.seconds) return new Date(value.seconds * 1000).toLocaleDateString();
+      return new Date(value).toLocaleDateString();
+    } catch {
+      return 'N/A';
+    }
+  };
+
   const filteredProjects = projects.filter(p => {
     const search = searchTerm.toLowerCase();
     return (
@@ -350,8 +363,8 @@ export default function ProjectsPage() {
               {/* Dates */}
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Start: {project.startDate?.toDate ? project.startDate.toDate().toLocaleDateString() : 'N/A'}</span>
-                  <span>Target: {project.targetEndDate?.toDate ? project.targetEndDate.toDate().toLocaleDateString() : 'N/A'}</span>
+                  <span>Start: {formatDate(project.startDate)}</span>
+                  <span>Target: {formatDate(project.targetEndDate)}</span>
                 </div>
               </div>
             </div>

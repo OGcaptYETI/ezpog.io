@@ -55,6 +55,15 @@ export function ProjectModal({ isOpen, onClose, onSave, project, mode }: Project
   const [formData, setFormData] = useState<ProjectFormData>(getInitialFormData());
   const [saving, setSaving] = useState(false);
 
+  // Helper to convert Timestamp or Date to Date
+  const toDate = (value: any): Date => {
+    if (!value) return new Date();
+    if (value instanceof Date) return value;
+    if (value.toDate && typeof value.toDate === 'function') return value.toDate();
+    if (value.seconds) return new Date(value.seconds * 1000); // Firestore Timestamp
+    return new Date(value);
+  };
+
   // Update formData when project prop changes (for edit mode)
   useEffect(() => {
     if (project && mode === 'edit') {
@@ -65,13 +74,13 @@ export function ProjectModal({ isOpen, onClose, onSave, project, mode }: Project
         projectType: project.projectType,
         status: project.status,
         priority: project.priority,
-        startDate: project.startDate.toDate(),
-        targetEndDate: project.targetEndDate.toDate(),
-        actualEndDate: project.actualEndDate?.toDate(),
+        startDate: toDate(project.startDate),
+        targetEndDate: toDate(project.targetEndDate),
+        actualEndDate: project.actualEndDate ? toDate(project.actualEndDate) : undefined,
         milestones: project.milestones?.map(m => ({
           ...m,
-          targetDate: m.targetDate.toDate(),
-          completedDate: m.completedDate?.toDate(),
+          targetDate: toDate(m.targetDate),
+          completedDate: m.completedDate ? toDate(m.completedDate) : undefined,
         })),
         estimatedBudget: project.estimatedBudget,
         actualBudget: project.actualBudget,
