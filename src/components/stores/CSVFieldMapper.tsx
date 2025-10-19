@@ -1,8 +1,14 @@
 import { useState } from 'react';
-import { ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, AlertCircle, CheckCircle2, Plus, X } from 'lucide-react';
+import type { CustomFieldDefinition } from '@/types';
 
 export interface FieldMapping {
-  [csvColumn: string]: string; // Maps CSV column name to system field name
+  [csvColumn: string]: string; // Maps CSV column name to system field name (or custom field ID)
+}
+
+export interface CustomFieldMapping {
+  csvColumn: string;
+  customField: CustomFieldDefinition;
 }
 
 export interface SystemField {
@@ -37,11 +43,12 @@ export const SYSTEM_FIELDS: SystemField[] = [
 
 interface CSVFieldMapperProps {
   csvHeaders: string[];
-  onMappingComplete: (mapping: FieldMapping) => void;
+  onMappingComplete: (mapping: FieldMapping, customFields?: CustomFieldMapping[]) => void;
   sampleData?: Record<string, string>; // First row of data for preview
+  existingCustomFields?: CustomFieldDefinition[];
 }
 
-export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData }: CSVFieldMapperProps) {
+export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData, existingCustomFields = [] }: CSVFieldMapperProps) {
   const [mapping, setMapping] = useState<FieldMapping>(() => {
     // Auto-detect common mappings
     const autoMapping: FieldMapping = {};

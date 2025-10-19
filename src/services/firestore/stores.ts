@@ -53,6 +53,9 @@ export interface Store {
   storeManagerEmail?: string;
   storePhone?: string;
   
+  // Custom Fields (Organization-specific)
+  customFields?: Record<string, string | number | boolean>;
+  
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;

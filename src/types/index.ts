@@ -82,6 +82,7 @@ export interface OrganizationSettings {
   features?: string[];
   maxUsers?: number;
   geoHierarchy?: GeoHierarchyConfig;
+  customStoreFields?: CustomFieldDefinition[];
 }
 
 export interface GeoHierarchyConfig {
@@ -89,6 +90,16 @@ export interface GeoHierarchyConfig {
   level2Label: string;  // e.g., "Region", "District", "Territory"
   level3Label: string;  // e.g., "Division", "Market", "Zone"
   level4Label: string;  // e.g., "Territory", "Store Group", "Cluster"
+}
+
+export interface CustomFieldDefinition {
+  id: string;
+  name: string;           // Internal name: "customerPriority"
+  label: string;          // Display name: "Customer Priority"
+  type: 'text' | 'number' | 'boolean' | 'select';
+  options?: string[];     // For select type
+  required?: boolean;
+  createdAt?: Timestamp;
 }
 
 /**
