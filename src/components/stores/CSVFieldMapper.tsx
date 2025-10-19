@@ -146,10 +146,18 @@ export function CSVFieldMapper({
   };
 
   const getRequiredFieldsStatus = () => {
-    const requiredFields = SYSTEM_FIELDS.filter(f => f.required);
+    // If auto-generate is enabled, storeId is not required to be mapped
+    const requiredFields = SYSTEM_FIELDS.filter(f => {
+      if (f.required && f.systemName === 'storeId' && autoGenerateEnabled) {
+        return false; // Skip storeId requirement when auto-generating
+      }
+      return f.required;
+    });
+    
     const mappedRequired = requiredFields.filter(f => 
       getMappedFields().includes(f.systemName)
     );
+    
     return {
       total: requiredFields.length,
       mapped: mappedRequired.length,
@@ -225,12 +233,16 @@ export function CSVFieldMapper({
             {requiredStatus.isComplete ? (
               <>
                 <p className="font-semibold">All required fields mapped!</p>
-                <p className="mt-1">You're ready to import. Review the mappings below and click Continue.</p>
+                <p className="mt-1">
+                  {autoGenerateEnabled && 'Store IDs will be auto-generated. '}
+                  You're ready to import. Review the mappings below and click Continue.
+                </p>
               </>
             ) : (
               <>
                 <p className="font-semibold">
                   {requiredStatus.mapped} of {requiredStatus.total} required fields mapped
+                  {autoGenerateEnabled && ' (Store ID: Auto-generating ✓)'}
                 </p>
                 <p className="mt-1">Please map the remaining required fields to continue.</p>
               </>
