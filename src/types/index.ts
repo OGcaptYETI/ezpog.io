@@ -81,6 +81,14 @@ export interface OrganizationSettings {
   dateFormat?: string;
   features?: string[];
   maxUsers?: number;
+  geoHierarchy?: GeoHierarchyConfig;
+}
+
+export interface GeoHierarchyConfig {
+  level1Label: string;  // e.g., "Area", "Region", "Division"
+  level2Label: string;  // e.g., "Region", "District", "Territory"
+  level3Label: string;  // e.g., "Division", "Market", "Zone"
+  level4Label: string;  // e.g., "Territory", "Store Group", "Cluster"
 }
 
 /**

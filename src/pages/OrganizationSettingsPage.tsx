@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth';
-import { getOrganization, updateOrganization } from '@/services/firestore/organizations';
-import type { Organization } from '@/types';
+import { getOrganization, updateOrganization, updateGeoHierarchy } from '@/services/firestore/organizations';
+import type { Organization, GeoHierarchyConfig } from '@/types';
 import { Building2, Save, Users, Shield, Mail } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
+import { GeoHierarchySettings } from '@/components/settings/GeoHierarchySettings';
 
 export default function OrganizationSettingsPage() {
   const { user } = useAuth();
@@ -82,6 +83,13 @@ export default function OrganizationSettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleGeoHierarchySave = async (geoHierarchy: GeoHierarchyConfig) => {
+    if (!organization) return;
+    await updateGeoHierarchy(organization.id, geoHierarchy);
+    // Reload organization to reflect changes
+    await loadOrganization();
   };
 
   if (loading) {
@@ -300,6 +308,12 @@ export default function OrganizationSettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Geographic Hierarchy Configuration */}
+        <GeoHierarchySettings
+          currentConfig={organization.settings?.geoHierarchy}
+          onSave={handleGeoHierarchySave}
+        />
 
         {/* Statistics */}
         <div className="bg-white rounded-xl border p-6">

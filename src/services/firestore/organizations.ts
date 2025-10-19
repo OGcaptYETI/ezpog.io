@@ -13,7 +13,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import type { Organization } from '@/types';
+import type { Organization, GeoHierarchyConfig } from '@/types';
 
 const COLLECTION_NAME = 'organizations';
 
@@ -129,6 +129,20 @@ export async function updateOrganizationStatus(
   const docRef = doc(db, COLLECTION_NAME, id);
   await updateDoc(docRef, {
     status,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Update organization geographic hierarchy configuration
+ */
+export async function updateGeoHierarchy(
+  organizationId: string,
+  geoHierarchy: GeoHierarchyConfig
+): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, organizationId);
+  await updateDoc(docRef, {
+    'settings.geoHierarchy': geoHierarchy,
     updatedAt: Timestamp.now(),
   });
 }
