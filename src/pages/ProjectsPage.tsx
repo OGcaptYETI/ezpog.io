@@ -101,11 +101,14 @@ export default function ProjectsPage() {
     await loadProjects();
   };
 
-  const filteredProjects = projects.filter(p =>
-    (p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.projectId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.chainName?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredProjects = projects.filter(p => {
+    const search = searchTerm.toLowerCase();
+    return (
+      p.name?.toLowerCase().includes(search) ||
+      p.projectId?.toLowerCase().includes(search) ||
+      p.chainName?.toLowerCase().includes(search)
+    );
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -311,21 +314,21 @@ export default function ProjectsPage() {
                   <div className="flex items-center justify-center mb-1">
                     <TrendingUp className="w-4 h-4 text-gray-500" />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{project.completionPercentage}%</div>
+                  <div className="text-2xl font-bold text-gray-900">{project.completionPercentage || 0}%</div>
                   <div className="text-xs text-gray-500">Complete</div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-1">
                     <Users className="w-4 h-4 text-gray-500" />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{project.teamMembers.length}</div>
+                  <div className="text-2xl font-bold text-gray-900">{project.teamMembers?.length || 0}</div>
                   <div className="text-xs text-gray-500">Team</div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-1">
                     <Calendar className="w-4 h-4 text-gray-500" />
                   </div>
-                  <div className="text-2xl font-bold text-gray-900">{project.totalStores}</div>
+                  <div className="text-2xl font-bold text-gray-900">{project.totalStores || 0}</div>
                   <div className="text-xs text-gray-500">Stores</div>
                 </div>
               </div>
@@ -334,12 +337,12 @@ export default function ProjectsPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm text-gray-600">
                   <span>Progress</span>
-                  <span>{project.completedStores} / {project.totalStores} stores</span>
+                  <span>{project.completedStores || 0} / {project.totalStores || 0} stores</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-indigo-600 h-2 rounded-full transition-all"
-                    style={{ width: `${project.completionPercentage}%` }}
+                    style={{ width: `${project.completionPercentage || 0}%` }}
                   />
                 </div>
               </div>
@@ -347,8 +350,8 @@ export default function ProjectsPage() {
               {/* Dates */}
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Start: {project.startDate.toDate().toLocaleDateString()}</span>
-                  <span>Target: {project.targetEndDate.toDate().toLocaleDateString()}</span>
+                  <span>Start: {project.startDate?.toDate ? project.startDate.toDate().toLocaleDateString() : 'N/A'}</span>
+                  <span>Target: {project.targetEndDate?.toDate ? project.targetEndDate.toDate().toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
             </div>
