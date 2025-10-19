@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { X, Upload, Download, AlertCircle, CheckCircle2, FileText } from 'lucide-react';
+import { X, Upload, Download, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { bulkImportStores, type CSVStoreData } from '@/services/firestore/stores';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
+import { CSVFieldMapper, type FieldMapping } from './CSVFieldMapper';
 
 interface CSVImportModalProps {
   isOpen: boolean;
@@ -11,10 +12,16 @@ interface CSVImportModalProps {
   onSuccess: () => void;
 }
 
+type ImportStep = 'upload' | 'mapping' | 'preview' | 'complete';
+
 export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvData, setCsvData] = useState<Record<string, string>[]>([]);
+  const [fieldMapping, setFieldMapping] = useState<FieldMapping>({});
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<CSVStoreData[]>([]);
   const [importResult, setImportResult] = useState<{
@@ -23,55 +30,65 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
     errors: string[];
   } | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile && selectedFile.type === 'text/csv') {
-      setFile(selectedFile);
-      parseCSV(selectedFile);
-    } else {
+    if (!selectedFile) return;
+
+    if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
       showToast('Please select a valid CSV file', 'error');
+      return;
     }
+
+    setFile(selectedFile);
+    await parseCSVHeaders(selectedFile);
+    setStep('mapping');
   };
 
-  const parseCSV = async (file: File) => {
+  const parseCSVHeaders = async (file: File) => {
     const text = await file.text();
-    const lines = text.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const lines = text.split('\n').filter(line => line.trim());
     
-    const data: CSVStoreData[] = [];
-    for (let i = 1; i < Math.min(lines.length, 6); i++) {
-      if (!lines[i].trim()) continue;
-      
-      const values = lines[i].split(',');
-      const row: any = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index]?.trim() || '';
-      });
-      
-      data.push({
-        storeId: row.storeid || row['store id'] || row.id || '',
-        storeName: row.storename || row['store name'] || row.name || '',
-        storeNumber: row.storenumber || row['store number'] || row.number,
-        address: row.address || '',
-        city: row.city || '',
-        state: row.state || '',
-        zipCode: row.zipcode || row['zip code'] || row.zip || '',
-        country: row.country,
-        region: row.region,
-        district: row.district,
-        marketArea: row.marketarea || row['market area'],
-        storeFormat: row.storeformat || row['store format'] || row.format,
-        squareFootage: row.squarefootage || row['square footage'] || row.sqft,
-        fixtureCount: row.fixturecount || row['fixture count'] || row.fixtures,
-        latitude: row.latitude || row.lat,
-        longitude: row.longitude || row.lng || row.lon,
-        storeManagerName: row.storemanagername || row['store manager name'] || row.manager,
-        storeManagerEmail: row.storemanageremail || row['store manager email'],
-        storePhone: row.storephone || row['store phone'] || row.phone,
-      });
+    if (lines.length === 0) {
+      showToast('CSV file is empty', 'error');
+      return;
     }
+
+    const headers = lines[0].split(',').map(h => h.trim());
+    setCsvHeaders(headers);
+
+    // Parse all data for mapping and preview
+    const allData: Record<string, string>[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      const row: Record<string, string> = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+      allData.push(row);
+    }
+    setCsvData(allData);
+  };
+
+  const handleMappingComplete = (mapping: FieldMapping) => {
+    setFieldMapping(mapping);
+    generatePreview(mapping);
+    setStep('preview');
+  };
+
+  const generatePreview = (mapping: FieldMapping) => {
+    const previewData: CSVStoreData[] = csvData.slice(0, 5).map(row => {
+      const mapped: any = {};
+      
+      for (const [csvCol, systemField] of Object.entries(mapping)) {
+        if (systemField && row[csvCol]) {
+          mapped[systemField] = row[csvCol];
+        }
+      }
+      
+      return mapped as CSVStoreData;
+    });
     
-    setPreview(data);
+    setPreview(previewData);
   };
 
   const handleImport = async () => {
@@ -81,51 +98,22 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
     setImportResult(null);
 
     try {
-      const text = await file.text();
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const stores: CSVStoreData[] = csvData.map(row => {
+        const mapped: any = {};
+        
+        for (const [csvCol, systemField] of Object.entries(fieldMapping)) {
+          if (systemField && row[csvCol]) {
+            mapped[systemField] = row[csvCol];
+          }
+        }
+        
+        return mapped as CSVStoreData;
+      });
+
+      const result = await bulkImportStores(stores, user.organizationId);
       
-      const stores: CSVStoreData[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        const values = lines[i].split(',');
-        const row: any = {};
-        headers.forEach((header, index) => {
-          row[header] = values[index]?.trim() || '';
-        });
-        
-        stores.push({
-          storeId: row.storeid || row['store id'] || row.id || '',
-          storeName: row.storename || row['store name'] || row.name || '',
-          storeNumber: row.storenumber || row['store number'] || row.number,
-          address: row.address || '',
-          city: row.city || '',
-          state: row.state || '',
-          zipCode: row.zipcode || row['zip code'] || row.zip || '',
-          country: row.country,
-          region: row.region,
-          district: row.district,
-          marketArea: row.marketarea || row['market area'],
-          storeFormat: row.storeformat || row['store format'] || row.format,
-          squareFootage: row.squarefootage || row['square footage'] || row.sqft,
-          fixtureCount: row.fixturecount || row['fixture count'] || row.fixtures,
-          latitude: row.latitude || row.lat,
-          longitude: row.longitude || row.lng || row.lon,
-          storeManagerName: row.storemanagername || row['store manager name'] || row.manager,
-          storeManagerEmail: row.storemanageremail || row['store manager email'],
-          storePhone: row.storephone || row['store phone'] || row.phone,
-        });
-      }
-
-      const result = await bulkImportStores(
-        stores,
-        user.organizationId,
-        user.uid,
-        user.displayName || user.email
-      );
-
       setImportResult(result);
+      setStep('complete');
       
       if (result.success > 0) {
         showToast(`Successfully imported ${result.success} stores`, 'success');
@@ -158,19 +146,39 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
     URL.revokeObjectURL(url);
   };
 
+  const resetModal = () => {
+    setStep('upload');
+    setFile(null);
+    setCsvHeaders([]);
+    setCsvData([]);
+    setFieldMapping({});
+    setPreview([]);
+    setImportResult(null);
+  };
+
+  const handleClose = () => {
+    resetModal();
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <Upload className="w-6 h-6 text-indigo-600" />
-            <h2 className="text-2xl font-bold text-gray-900">Import Stores from CSV</h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Import Stores from CSV</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Step {step === 'upload' ? '1' : step === 'mapping' ? '2' : step === 'preview' ? '3' : '4'} of 4
+              </p>
+            </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <X className="w-6 h-6 text-gray-600" />
@@ -179,132 +187,184 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-900">
-                <p className="font-semibold mb-2">CSV Format Requirements:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li><strong>Required fields:</strong> storeId, storeName, address, city, state</li>
-                  <li><strong>Optional fields:</strong> storeNumber, zipCode, country, region, district, marketArea, storeFormat, squareFootage, fixtureCount, latitude, longitude, storeManagerName, storeManagerEmail, storePhone</li>
-                  <li>First row must be headers (field names)</li>
-                  <li>Use comma (,) as delimiter</li>
-                </ul>
+          {/* Step 1: Upload */}
+          {step === 'upload' && (
+            <div className="space-y-6">
+              {/* Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-900">
+                    <p className="font-semibold mb-2">CSV Format Requirements:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li><strong>Required fields:</strong> storeId, storeName, address, city, state</li>
+                      <li>First row must contain column headers</li>
+                      <li>You'll be able to map your columns to our system fields in the next step</li>
+                      <li><strong>Recommendation:</strong> For testing, upload 500-2000 stores max</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Download Template */}
+              <div className="flex items-center justify-center">
+                <Button onClick={downloadTemplate} variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV Template
+                </Button>
+              </div>
+
+              {/* Upload Area */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-indigo-500 transition-colors">
+                <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-lg font-medium text-gray-900 mb-2">Choose a CSV file to upload</p>
+                <p className="text-sm text-gray-600 mb-4">
+                  or drag and drop your file here
+                </p>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label htmlFor="csv-upload">
+                  <Button as="span">
+                    Select File
+                  </Button>
+                </label>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Download Template */}
-          <div className="mb-6">
-            <Button
-              onClick={downloadTemplate}
-              variant="outline"
-              className="w-full"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download CSV Template
-            </Button>
-          </div>
+          {/* Step 2: Field Mapping */}
+          {step === 'mapping' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setStep('upload')}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Map CSV Fields</h3>
+                  <p className="text-sm text-gray-600">
+                    File: {file?.name} ({csvData.length} rows)
+                  </p>
+                </div>
+              </div>
 
-          {/* File Upload */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6">
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="hidden"
-              id="csv-upload"
-            />
-            <label htmlFor="csv-upload" className="cursor-pointer">
-              <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <p className="text-lg font-medium text-gray-900 mb-2">
-                {file ? file.name : 'Choose a CSV file'}
-              </p>
-              <p className="text-sm text-gray-500">Click to browse or drag and drop</p>
-            </label>
-          </div>
+              <CSVFieldMapper
+                csvHeaders={csvHeaders}
+                onMappingComplete={handleMappingComplete}
+                sampleData={csvData[0]}
+              />
+            </div>
+          )}
 
-          {/* Preview */}
-          {preview.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Preview (first 5 rows)</h3>
-              <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          {/* Step 3: Preview */}
+          {step === 'preview' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setStep('mapping')}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Preview Import</h3>
+                  <p className="text-sm text-gray-600">
+                    Review the first 5 rows before importing {csvData.length} total stores
+                  </p>
+                </div>
+              </div>
+
+              {/* Preview Table */}
+              <div className="overflow-x-auto border rounded-lg">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Store ID</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">City</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">State</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700">Store ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700">Store Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700">Address</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700">City</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700">State</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {preview.map((store, index) => (
                       <tr key={index}>
-                        <td className="px-4 py-2 text-sm text-gray-900">{store.storeId}</td>
-                        <td className="px-4 py-2 text-sm text-gray-900">{store.storeName}</td>
-                        <td className="px-4 py-2 text-sm text-gray-600">{store.address}</td>
-                        <td className="px-4 py-2 text-sm text-gray-600">{store.city}</td>
-                        <td className="px-4 py-2 text-sm text-gray-600">{store.state}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{store.storeId}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{store.storeName}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{store.address}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{store.city}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{store.state}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
 
-          {/* Import Result */}
-          {importResult && (
-            <div className={`border rounded-lg p-4 ${
-              importResult.failed === 0 ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
-            }`}>
-              <div className="flex items-start gap-3">
-                {importResult.failed === 0 ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1">
-                  <p className="font-semibold text-sm mb-2">
-                    Import Summary:
-                  </p>
-                  <ul className="text-sm space-y-1">
-                    <li className="text-green-700">✓ Successfully imported: {importResult.success} stores</li>
-                    {importResult.failed > 0 && (
-                      <li className="text-red-700">✗ Failed: {importResult.failed} stores</li>
-                    )}
-                  </ul>
-                  {importResult.errors.length > 0 && (
-                    <div className="mt-3">
-                      <p className="font-semibold text-sm mb-1">Errors:</p>
-                      <ul className="text-xs space-y-1 max-h-32 overflow-y-auto">
-                        {importResult.errors.map((error, index) => (
-                          <li key={index} className="text-red-700">• {error}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-900">
+                  <strong>Ready to import {csvData.length} stores</strong>
+                  <br />
+                  This may take a few moments. Please don't close this window during import.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button onClick={() => setStep('mapping')} variant="outline">
+                  Back to Mapping
+                </Button>
+                <Button onClick={handleImport} disabled={importing}>
+                  {importing ? 'Importing...' : `Import ${csvData.length} Stores`}
+                </Button>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-          <Button onClick={onClose} variant="outline">
-            {importResult ? 'Close' : 'Cancel'}
-          </Button>
-          {!importResult && (
-            <Button
-              onClick={handleImport}
-              disabled={!file || importing}
-            >
-              {importing ? 'Importing...' : 'Import Stores'}
-            </Button>
+          {/* Step 4: Complete */}
+          {step === 'complete' && importResult && (
+            <div className="space-y-6">
+              <div className="text-center py-8">
+                <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Import Complete!</h3>
+                <p className="text-gray-600">
+                  Successfully imported {importResult.success} stores
+                </p>
+                {importResult.failed > 0 && (
+                  <p className="text-red-600 mt-2">
+                    {importResult.failed} stores failed to import
+                  </p>
+                )}
+              </div>
+
+              {importResult.errors.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                  <h4 className="font-semibold text-red-900 mb-2">Errors:</h4>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-red-800">
+                    {importResult.errors.slice(0, 10).map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                    {importResult.errors.length > 10 && (
+                      <li>...and {importResult.errors.length - 10} more errors</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex justify-center gap-3">
+                <Button onClick={resetModal} variant="outline">
+                  Import More Stores
+                </Button>
+                <Button onClick={handleClose}>
+                  Done
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </div>
