@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/features/auth';
 import { getStoresByOrganization, type Store } from '@/services/firestore/stores';
-import { Building2, Plus, Search, Upload, MapPin, Phone, User } from 'lucide-react';
+import { Building2, Plus, Search, Upload, MapPin, Phone, User, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
+
+type SortField = 'storeName' | 'storeId' | 'city' | 'state' | 'region' | 'storeFormat';
+type SortDirection = 'asc' | 'desc';
 
 export default function StoresPage() {
   const { user } = useAuth();
@@ -13,6 +16,17 @@ export default function StoresPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('storeName');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  
+  // Filter state
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterRegion, setFilterRegion] = useState('');
+  const [filterState, setFilterState] = useState('');
+  const [filterFormat, setFilterFormat] = useState('');
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
 
   // RBAC permissions
   const canCreate = user?.role === 'admin' || user?.role === 'manager';
@@ -35,12 +49,75 @@ export default function StoresPage() {
     }
   };
 
-  const filteredStores = stores.filter(s =>
-    s.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.storeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.state.toLowerCase().includes(searchTerm.toLowerCase())
+  // Get unique values for filter dropdowns
+  const uniqueRegions = useMemo(() => 
+    [...new Set(stores.map(s => s.region).filter(Boolean))].sort(),
+    [stores]
   );
+  
+  const uniqueStates = useMemo(() => 
+    [...new Set(stores.map(s => s.state).filter(Boolean))].sort(),
+    [stores]
+  );
+  
+  const uniqueFormats = useMemo(() => 
+    [...new Set(stores.map(s => s.storeFormat).filter(Boolean))].sort(),
+    [stores]
+  );
+
+  // Handle sort click
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Filter and sort stores
+  const filteredStores = useMemo(() => {
+    let filtered = stores.filter(s => {
+      // Search filter
+      const matchesSearch = s.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          s.storeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (s.storeNumber && s.storeNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          s.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          s.state.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) return false;
+      
+      // Region filter
+      if (filterRegion && s.region !== filterRegion) return false;
+      
+      // State filter
+      if (filterState && s.state !== filterState) return false;
+      
+      // Format filter
+      if (filterFormat && s.storeFormat !== filterFormat) return false;
+      
+      // Active status filter
+      if (filterActive === 'active' && !s.isActive) return false;
+      if (filterActive === 'inactive' && s.isActive) return false;
+      
+      return true;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aVal = a[sortField] || '';
+      let bVal = b[sortField] || '';
+      
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [stores, searchTerm, filterRegion, filterState, filterFormat, filterActive, sortField, sortDirection]);
 
   if (loading) {
     return (
