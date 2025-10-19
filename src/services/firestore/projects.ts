@@ -73,46 +73,116 @@ const COLLECTION_NAME = 'projects';
 /**
  * Create a new project
  */
+// Helper function to remove undefined values recursively
+function removeUndefined(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefined);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = removeUndefined(value);
+      }
+      return acc;
+    }, {} as any);
+  }
+  return obj;
+}
+
 export async function createProject(
   data: ProjectFormData,
   organizationId: string,
   userId: string,
   createdByName: string
 ): Promise<string> {
-  // Remove undefined values
-  const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
-    if (value !== undefined) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, unknown>);
-  
-  // Convert dates to Timestamps
-  const projectData = {
-    ...cleanData,
+  // Build project data with proper Timestamp conversions
+  const projectData: any = {
+    projectId: data.projectId,
+    name: data.name,
+    description: data.description || '',
+    projectType: data.projectType,
+    status: data.status || 'draft',
+    priority: data.priority,
+    startDate: Timestamp.fromDate(data.startDate),
+    targetEndDate: Timestamp.fromDate(data.targetEndDate),
     organizationId,
     createdBy: userId,
     createdByName,
-    startDate: Timestamp.fromDate(data.startDate),
-    targetEndDate: Timestamp.fromDate(data.targetEndDate),
-    actualEndDate: data.actualEndDate ? Timestamp.fromDate(data.actualEndDate) : undefined,
-    milestones: data.milestones?.map(m => ({
-      ...m,
-      targetDate: Timestamp.fromDate(m.targetDate),
-      completedDate: m.completedDate ? Timestamp.fromDate(m.completedDate) : undefined,
-    })),
+    currency: data.currency,
     stores: data.stores || [],
     teamMembers: data.teamMembers || [],
     totalStores: data.stores?.length || 0,
     completedStores: 0,
     inProgressStores: 0,
     completionPercentage: 0,
-    status: data.status || 'draft',
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
   };
+
+  // Add optional fields only if they have values
+  if (data.actualEndDate) {
+    projectData.actualEndDate = Timestamp.fromDate(data.actualEndDate);
+  }
   
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), projectData);
+  if (data.milestones && data.milestones.length > 0) {
+    projectData.milestones = data.milestones.map(m => {
+      const milestone: any = {
+        id: m.id,
+        name: m.name,
+        targetDate: Timestamp.fromDate(m.targetDate),
+        completed: m.completed,
+      };
+      if (m.completedDate) {
+        milestone.completedDate = Timestamp.fromDate(m.completedDate);
+      }
+      return milestone;
+    });
+  }
+
+  if (data.estimatedBudget !== undefined && data.estimatedBudget !== null) {
+    projectData.estimatedBudget = data.estimatedBudget;
+  }
+  
+  if (data.actualBudget !== undefined && data.actualBudget !== null) {
+    projectData.actualBudget = data.actualBudget;
+  }
+  
+  if (data.estimatedLaborHours !== undefined && data.estimatedLaborHours !== null) {
+    projectData.estimatedLaborHours = data.estimatedLaborHours;
+  }
+  
+  if (data.actualLaborHours !== undefined && data.actualLaborHours !== null) {
+    projectData.actualLaborHours = data.actualLaborHours;
+  }
+  
+  if (data.chainName) {
+    projectData.chainName = data.chainName;
+  }
+  
+  if (data.chainType) {
+    projectData.chainType = data.chainType;
+  }
+  
+  if (data.region) {
+    projectData.region = data.region;
+  }
+  
+  if (data.district) {
+    projectData.district = data.district;
+  }
+  
+  if (data.tags && data.tags.length > 0) {
+    projectData.tags = data.tags;
+  }
+  
+  if (data.notes) {
+    projectData.notes = data.notes;
+  }
+
+  // Final cleanup to ensure no undefined values
+  const cleanedData = removeUndefined(projectData);
+  
+  const docRef = await addDoc(collection(db, COLLECTION_NAME), cleanedData);
   return docRef.id;
 }
 
