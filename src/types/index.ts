@@ -107,24 +107,187 @@ export interface Permission {
 export type PermissionAction = "create" | "read" | "update" | "delete" | "manage";
 
 /**
- * Project types
+ * Project types - POG Execution & Reset Management
  */
 export interface Project {
+  // Core Identification
   id: string;
+  organizationId: string;
+  projectId: string;             // User-defined project code
+  
+  // Basic Information
   name: string;
   description?: string;
+  projectType: ProjectType;
   status: ProjectStatus;
-  organizationId: string;
-  createdBy: string;
-  members: string[];
-  startDate?: Timestamp;
-  endDate?: Timestamp;
+  priority: ProjectPriority;
+  
+  // Timeline
+  startDate: Timestamp;
+  targetEndDate: Timestamp;
+  actualEndDate?: Timestamp;
+  milestones?: ProjectMilestone[];
+  
+  // Financial
+  estimatedBudget?: number;
+  actualBudget?: number;
+  estimatedLaborHours?: number;
+  actualLaborHours?: number;
+  currency: string;              // USD, CAD, etc.
+  
+  // Scope
+  chainName?: string;
+  chainType?: 'corporate' | 'independent';
+  region?: string;
+  district?: string;
+  
+  // Store Management
+  stores: ProjectStore[];
+  totalStores: number;
+  completedStores: number;
+  inProgressStores: number;
+  
+  // Team
+  teamMembers: ProjectMember[];
+  createdBy: string;             // User ID
+  createdByName: string;         // User display name
+  
+  // Metadata
+  tags?: string[];
+  notes?: string;
+  attachments?: string[];
+  
+  // System Fields
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  metadata?: Record<string, unknown>;
+  completionPercentage: number;
 }
 
-export type ProjectStatus = "active" | "completed" | "on_hold" | "archived";
+export type ProjectType = 
+  | 'reset'                // Full store reset
+  | 'refresh'              // Minor updates
+  | 'new_store'            // New store setup
+  | 'seasonal'             // Seasonal changeover
+  | 'remodel'              // Store renovation
+  | 'compliance_check'     // Audit/verification
+  | 'emergency';           // Urgent fixes
+
+export type ProjectStatus = 
+  | 'draft'                // Being planned
+  | 'planning'             // Awaiting approval
+  | 'active'               // In execution
+  | 'on_hold'              // Temporarily paused
+  | 'completed'            // Successfully finished
+  | 'cancelled';           // Terminated
+
+export type ProjectPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface ProjectMilestone {
+  id: string;
+  name: string;
+  targetDate: Timestamp;
+  completed: boolean;
+  completedDate?: Timestamp;
+}
+
+export interface ProjectMember {
+  userId: string;
+  displayName: string;
+  email: string;
+  role: 'manager' | 'coordinator' | 'field_team';
+  assignedStores?: string[];     // Store IDs
+}
+
+export interface ProjectStore {
+  // Store Identification
+  storeId: string;
+  storeName: string;
+  storeNumber?: string;
+  
+  // Location
+  address: string;
+  address2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  
+  // Chain Hierarchy
+  chainName: string;
+  chainType: 'corporate' | 'independent';
+  district?: string;
+  region?: string;
+  marketArea?: string;
+  
+  // Store Characteristics
+  storeFormat: string;           // Small, Standard, Large
+  squareFootage?: number;
+  fixtureCount?: number;
+  layout?: string;
+  
+  // Contact Information
+  storeManager?: string;
+  phoneNumber?: string;
+  email?: string;
+  
+  // Schematic Assignment
+  schematicId?: string;
+  schematicName?: string;
+  schematicVersion?: number;
+  resetRequired: boolean;
+  lastResetDate?: Timestamp;
+  
+  // Execution Tracking
+  status: StoreStatus;
+  assignedTeam?: string[];       // User IDs
+  scheduledDate?: Timestamp;
+  scheduledTimeWindow?: string;
+  startedDate?: Timestamp;
+  completedDate?: Timestamp;
+  
+  // Verification & Compliance
+  beforePhotos?: string[];
+  afterPhotos?: string[];
+  executionNotes?: string;
+  issuesReported?: StoreIssue[];
+  verifiedProducts: boolean;
+  complianceScore?: number;
+  
+  // Performance Metrics
+  estimatedDuration?: number;    // Hours
+  actualDuration?: number;       // Hours
+  laborCost?: number;
+  
+  // Routing
+  distanceFromPrevious?: number; // Miles
+  estimatedTravelTime?: number;  // Minutes
+  routeOrder?: number;
+}
+
+export type StoreStatus = 
+  | 'pending'
+  | 'scheduled'
+  | 'in_progress'
+  | 'completed'
+  | 'failed'
+  | 'rescheduled'
+  | 'skipped';
+
+export interface StoreIssue {
+  id: string;
+  type: 'missing_product' | 'damaged_fixture' | 'access_denied' | 'other';
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  reportedBy: string;
+  reportedDate: Timestamp;
+  resolved: boolean;
+  resolution?: string;
+  photos?: string[];
+}
 
 /**
  * Task types

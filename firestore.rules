@@ -136,25 +136,23 @@ service cloud.firestore {
     }
     
     // ============================================
-    // PROJECTS COLLECTION
+    // PROJECTS COLLECTION - POG Execution & Reset Management
     // ============================================
     
     match /projects/{projectId} {
-      // Members of organization can read projects
+      // All org members can read projects (visibility for all)
       allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
       
-      // Authenticated users can create projects in their org
+      // Only admins and managers can create projects
       allow create: if isAuthenticated() && 
-                       belongsToOrg(request.resource.data.organizationId);
+                       belongsToOrg(request.resource.data.organizationId) &&
+                       isAdminOrManager(request.resource.data.organizationId);
       
-      // Project members and admins can update
-      allow update: if isAuthenticated() && (
-        request.auth.uid in resource.data.members ||
-        isAdminOrManager(resource.data.organizationId)
-      );
+      // Only admins and managers can update projects
+      allow update: if isAuthenticated() && isAdminOrManager(resource.data.organizationId);
       
-      // Only admins can delete projects
-      allow delete: if isAdminOrManager(resource.data.organizationId);
+      // Only admins and managers can delete projects
+      allow delete: if isAuthenticated() && isAdminOrManager(resource.data.organizationId);
       
       // Project tasks subcollection
       match /tasks/{taskId} {
