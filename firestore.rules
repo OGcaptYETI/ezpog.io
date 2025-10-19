@@ -302,8 +302,19 @@ service cloud.firestore {
     // ============================================
     
     match /stores/{storeId} {
+      // All org members can read stores
       allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
-      allow write: if isAdminOrManager(resource.data.organizationId);
+      
+      // Admins and managers can create stores (for CSV import)
+      allow create: if isAuthenticated() && 
+                       belongsToOrg(request.resource.data.organizationId) &&
+                       isAdminOrManager(request.resource.data.organizationId);
+      
+      // Admins and managers can update stores
+      allow update: if isAuthenticated() && isAdminOrManager(resource.data.organizationId);
+      
+      // Admins and managers can delete stores
+      allow delete: if isAuthenticated() && isAdminOrManager(resource.data.organizationId);
     }
     
     // ============================================
