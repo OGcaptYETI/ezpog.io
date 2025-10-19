@@ -115,6 +115,8 @@ export interface CSVStoreData {
 
 export type ImportMode = 'skip' | 'update' | 'create-new';
 
+export type MatchStrategy = 'storeId' | 'storeName-address' | 'storeNumber';
+
 export interface AutoGenerateConfig {
   enabled: boolean;
   format: 'simple' | 'prefix' | 'suffix';
@@ -293,6 +295,55 @@ export async function checkExistingStores(
 }
 
 /**
+ * Find existing stores by name + address for matching
+ */
+export async function findStoresByNameAndAddress(
+  organizationId: string
+): Promise<Map<string, string>> {
+  // Returns Map of "storeName|address" -> documentId
+  const storesMap = new Map<string, string>();
+  
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where('organizationId', '==', organizationId)
+  );
+  
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const key = `${data.storeName}|${data.address}`.toLowerCase();
+    storesMap.set(key, doc.id);
+  });
+  
+  return storesMap;
+}
+
+/**
+ * Find existing stores by store number for matching
+ */
+export async function findStoresByNumber(
+  organizationId: string
+): Promise<Map<string, string>> {
+  // Returns Map of storeNumber -> documentId
+  const storesMap = new Map<string, string>();
+  
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where('organizationId', '==', organizationId)
+  );
+  
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (data.storeNumber) {
+      storesMap.set(data.storeNumber, doc.id);
+    }
+  });
+  
+  return storesMap;
+}
+
+/**
  * Generate Store ID based on configuration
  */
 export function generateStoreId(
@@ -322,7 +373,8 @@ export async function bulkImportStores(
   userId: string,
   createdByName: string,
   mode: ImportMode = 'create-new',
-  autoGenerateConfig?: AutoGenerateConfig
+  autoGenerateConfig?: AutoGenerateConfig,
+  matchStrategy: MatchStrategy = 'storeId'
 ): Promise<{ success: number; failed: number; errors: string[]; skipped: number; updated: number }> {
   const batch = writeBatch(db);
   const errors: string[] = [];
@@ -333,7 +385,8 @@ export async function bulkImportStores(
 
   // Auto-generate Store IDs if configured
   const processedStores = stores.map((store, index) => {
-    if (autoGenerateConfig?.enabled && (!store.storeId || store.storeId.trim() === '')) {
+    if (autoGenerateConfig?.enabled) {
+      // Always generate new ID when auto-generate is enabled
       return {
         ...store,
         storeId: generateStoreId(index, autoGenerateConfig)
@@ -345,12 +398,36 @@ export async function bulkImportStores(
   // Check for existing stores if mode is skip or update
   const existingStoresMap = new Map<string, string>();
   if (mode === 'skip' || mode === 'update') {
-    const storeIds = processedStores.map(s => s.storeId).filter(Boolean);
-    // Query existing stores in chunks due to Firestore limit
-    for (let i = 0; i < storeIds.length; i += 10) {
-      const chunk = storeIds.slice(i, i + 10);
-      const existing = await checkExistingStores(chunk, organizationId);
-      existing.forEach((docId, storeId) => existingStoresMap.set(storeId, docId));
+    if (matchStrategy === 'storeId') {
+      // Match by Store ID
+      const storeIds = processedStores.map(s => s.storeId).filter(Boolean);
+      for (let i = 0; i < storeIds.length; i += 10) {
+        const chunk = storeIds.slice(i, i + 10);
+        const existing = await checkExistingStores(chunk, organizationId);
+        existing.forEach((docId, storeId) => existingStoresMap.set(storeId, docId));
+      }
+    } else if (matchStrategy === 'storeName-address') {
+      // Match by Store Name + Address
+      const allStores = await findStoresByNameAndAddress(organizationId);
+      processedStores.forEach(store => {
+        const key = `${store.storeName}|${store.address}`.toLowerCase();
+        const docId = allStores.get(key);
+        if (docId) {
+          // Use a composite key for lookup: name|address -> docId
+          existingStoresMap.set(key, docId);
+        }
+      });
+    } else if (matchStrategy === 'storeNumber') {
+      // Match by Store Number
+      const allStores = await findStoresByNumber(organizationId);
+      processedStores.forEach(store => {
+        if (store.storeNumber) {
+          const docId = allStores.get(store.storeNumber);
+          if (docId) {
+            existingStoresMap.set(store.storeNumber, docId);
+          }
+        }
+      });
     }
   }
 
@@ -363,8 +440,17 @@ export async function bulkImportStores(
         continue;
       }
 
-      const storeId = store.storeId.trim();
-      const existingDocId = existingStoresMap.get(storeId);
+      // Get the lookup key based on match strategy
+      let lookupKey: string;
+      if (matchStrategy === 'storeName-address') {
+        lookupKey = `${store.storeName}|${store.address}`.toLowerCase();
+      } else if (matchStrategy === 'storeNumber' && store.storeNumber) {
+        lookupKey = store.storeNumber;
+      } else {
+        lookupKey = store.storeId.trim();
+      }
+      
+      const existingDocId = existingStoresMap.get(lookupKey);
 
       // Handle based on mode
       if (existingDocId) {
@@ -382,6 +468,12 @@ export async function bulkImportStores(
             zipCode: store.zipCode?.trim() || '',
             updatedAt: Timestamp.now(),
           };
+
+          // Update Store ID if matching by name+address or storeNumber
+          // This allows replacing old IDs with auto-generated ones
+          if (matchStrategy !== 'storeId') {
+            updateData.storeId = store.storeId.trim();
+          }
 
           if (store.storeNumber) updateData.storeNumber = store.storeNumber.trim();
           if (store.country) updateData.country = store.country.trim();
@@ -427,7 +519,7 @@ export async function bulkImportStores(
       // Create new store
       const storeData: Record<string, unknown> = {
         organizationId,
-        storeId,
+        storeId: store.storeId.trim(),
         storeName: store.storeName.trim(),
         address: store.address.trim(),
         city: store.city.trim(),

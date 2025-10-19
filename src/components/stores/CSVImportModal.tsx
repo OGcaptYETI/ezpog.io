@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Upload, Download, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/features/auth';
-import { bulkImportStores, type CSVStoreData, type ImportMode, type AutoGenerateConfig } from '@/services/firestore/stores';
+import { bulkImportStores, type CSVStoreData, type ImportMode, type AutoGenerateConfig, type MatchStrategy } from '@/services/firestore/stores';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVFieldMapper, type FieldMapping, type CustomFieldMapping } from './CSVFieldMapper';
@@ -25,6 +25,7 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
   const [customFieldMappings, setCustomFieldMappings] = useState<CustomFieldMapping[]>([]);
   const [autoGenConfig, setAutoGenConfig] = useState<AutoGenerateConfig | undefined>();
   const [importMode, setImportMode] = useState<ImportMode>('create-new');
+  const [matchStrategy, setMatchStrategy] = useState<MatchStrategy>('storeId');
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<CSVStoreData[]>([]);
   const [importResult, setImportResult] = useState<{
@@ -79,10 +80,9 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
     setCustomFieldMappings(customMappings || []);
     setAutoGenConfig(autoConfig);
     
-    // Force "Create New" mode when auto-generating IDs
-    // (Skip/Update modes don't work with auto-generated IDs)
+    // When auto-generating IDs, default to name+address matching for Update mode
     if (autoConfig) {
-      setImportMode('create-new');
+      setMatchStrategy('storeName-address');
     }
     
     generatePreview(mapping, customMappings || []);
@@ -152,7 +152,8 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
         user.uid,
         user.displayName || user.email || 'Unknown',
         importMode,
-        autoGenConfig
+        autoGenConfig,
+        matchStrategy
       );
       
       setImportResult(result);
@@ -353,25 +354,44 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
                 </table>
               </div>
 
+              {/* Match Strategy Selection (when auto-generating) */}
+              {autoGenConfig && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <h4 className="text-sm font-semibold text-green-900 mb-2">Match Existing Stores By:</h4>
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        value="storeName-address"
+                        checked={matchStrategy === 'storeName-address'}
+                        onChange={(e) => setMatchStrategy(e.target.value as MatchStrategy)}
+                        className="w-4 h-4 text-green-600 mt-0.5"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-green-900">Store Name + Address (Recommended)</span>
+                        <p className="text-xs text-green-700">Match existing stores to REPLACE their Store IDs with auto-generated ones</p>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        value="storeNumber"
+                        checked={matchStrategy === 'storeNumber'}
+                        onChange={(e) => setMatchStrategy(e.target.value as MatchStrategy)}
+                        className="w-4 h-4 text-green-600 mt-0.5"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-green-900">Store Number</span>
+                        <p className="text-xs text-green-700">Match by store number if you have unique store numbers</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
+
               {/* Import Mode Selection */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="text-sm font-semibold text-blue-900 mb-2">Import Mode:</h4>
-                
-                {/* Warning if auto-generate is enabled */}
-                {autoGenConfig && (
-                  <div className="bg-red-50 border border-red-300 rounded-lg p-3 mb-3">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-xs text-red-900">
-                        <p className="font-semibold">Auto-generated IDs detected!</p>
-                        <p className="mt-1">
-                          Since you're auto-generating Store IDs, "Skip" and "Update" modes won't work 
-                          (the new IDs won't match existing stores). Only "Create New" mode is available.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
                 
                 <div className="space-y-2">
                   <label className="flex items-start gap-3 cursor-pointer">
@@ -387,37 +407,33 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
                       <p className="text-xs text-blue-700">Import all stores, even if Store IDs already exist</p>
                     </div>
                   </label>
-                  <label className={`flex items-start gap-3 ${autoGenConfig ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                  <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="radio"
                       value="skip"
                       checked={importMode === 'skip'}
-                      onChange={(e) => !autoGenConfig && setImportMode(e.target.value as ImportMode)}
-                      disabled={!!autoGenConfig}
+                      onChange={(e) => setImportMode(e.target.value as ImportMode)}
                       className="w-4 h-4 text-blue-600 mt-0.5"
                     />
                     <div>
                       <span className="text-sm font-medium text-blue-900">Skip Duplicates</span>
                       <p className="text-xs text-blue-700">
-                        Skip stores with existing Store IDs (keeps original data)
-                        {autoGenConfig && ' - Disabled with auto-generate'}
+                        Skip stores that match existing ones (keeps original data)
                       </p>
                     </div>
                   </label>
-                  <label className={`flex items-start gap-3 ${autoGenConfig ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                  <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="radio"
                       value="update"
                       checked={importMode === 'update'}
-                      onChange={(e) => !autoGenConfig && setImportMode(e.target.value as ImportMode)}
-                      disabled={!!autoGenConfig}
+                      onChange={(e) => setImportMode(e.target.value as ImportMode)}
                       className="w-4 h-4 text-blue-600 mt-0.5"
                     />
                     <div>
                       <span className="text-sm font-medium text-blue-900">Update Existing</span>
                       <p className="text-xs text-blue-700">
-                        Update stores with existing Store IDs (merges new data)
-                        {autoGenConfig && ' - Disabled with auto-generate'}
+                        Update stores that match existing ones (merges new data{autoGenConfig && ', REPLACES Store IDs'})
                       </p>
                     </div>
                   </label>
