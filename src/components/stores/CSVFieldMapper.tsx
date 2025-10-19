@@ -47,13 +47,34 @@ interface CSVFieldMapperProps {
   onMappingComplete: (mapping: FieldMapping, customFields?: CustomFieldMapping[]) => void;
   sampleData?: Record<string, string>; // First row of data for preview
   existingCustomFields?: CustomFieldDefinition[];
+  initialMapping?: FieldMapping; // Preserve mapping when going back
+  initialCustomFieldMappings?: CustomFieldMapping[]; // Preserve custom fields when going back
 }
 
-export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData, existingCustomFields = [] }: CSVFieldMapperProps) {
-  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>(existingCustomFields);
+export function CSVFieldMapper({ 
+  csvHeaders, 
+  onMappingComplete, 
+  sampleData, 
+  existingCustomFields = [],
+  initialMapping,
+  initialCustomFieldMappings = []
+}: CSVFieldMapperProps) {
+  // Use initial values if provided (when user navigates back)
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>(() => {
+    if (initialCustomFieldMappings.length > 0) {
+      return initialCustomFieldMappings.map(cm => cm.customField);
+    }
+    return existingCustomFields;
+  });
+  
   const [isAddFieldModalOpen, setIsAddFieldModalOpen] = useState(false);
   const [mapping, setMapping] = useState<FieldMapping>(() => {
-    // Auto-detect common mappings
+    // If we have initial mapping (user went back), use it
+    if (initialMapping && Object.keys(initialMapping).length > 0) {
+      return initialMapping;
+    }
+    
+    // Otherwise, auto-detect common mappings
     const autoMapping: FieldMapping = {};
     
     csvHeaders.forEach(csvCol => {

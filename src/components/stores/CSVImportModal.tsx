@@ -289,6 +289,8 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
                 csvHeaders={csvHeaders}
                 onMappingComplete={handleMappingComplete}
                 sampleData={csvData[0]}
+                initialMapping={fieldMapping}
+                initialCustomFieldMappings={customFieldMappings}
               />
             </div>
           )}
