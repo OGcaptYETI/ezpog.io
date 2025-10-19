@@ -69,7 +69,7 @@ export interface Store {
 export interface StoreFormData {
   storeId: string;
   storeName: string;
-  storeNumber?: string;
+  storeNumber?: string;  // Optional but built-in field
   address: string;
   city: string;
   state: string;
@@ -86,7 +86,7 @@ export interface StoreFormData {
   storeManagerName?: string;
   storeManagerEmail?: string;
   storePhone?: string;
-  isActive?: boolean;
+  isActive?: boolean;  // Active/Inactive status
 }
 
 export interface CSVStoreData {
@@ -109,7 +109,19 @@ export interface CSVStoreData {
   storeManagerName?: string;
   storeManagerEmail?: string;
   storePhone?: string;
+  isActive?: boolean;
   customFields?: Record<string, string | number | boolean>;
+}
+
+export type ImportMode = 'skip' | 'update' | 'create-new';
+
+export interface AutoGenerateConfig {
+  enabled: boolean;
+  format: 'simple' | 'prefix' | 'suffix';
+  prefix?: string;
+  suffix?: string;
+  padding: number; // Number of digits (e.g., 4 = 0001, 0002)
+  startNumber?: number;
 }
 
 const COLLECTION_NAME = 'stores';
@@ -257,20 +269,92 @@ export async function deleteStore(id: string): Promise<void> {
 }
 
 /**
+ * Check for existing stores by storeId
+ */
+export async function checkExistingStores(
+  storeIds: string[],
+  organizationId: string
+): Promise<Map<string, string>> {
+  const existingStores = new Map<string, string>(); // storeId -> documentId
+  
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where('organizationId', '==', organizationId),
+    where('storeId', 'in', storeIds.slice(0, 10)) // Firestore limit is 10
+  );
+  
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    existingStores.set(data.storeId, doc.id);
+  });
+  
+  return existingStores;
+}
+
+/**
+ * Generate Store ID based on configuration
+ */
+export function generateStoreId(
+  index: number,
+  config: AutoGenerateConfig
+): string {
+  const num = (config.startNumber || 1) + index;
+  const paddedNum = String(num).padStart(config.padding, '0');
+  
+  switch (config.format) {
+    case 'prefix':
+      return `${config.prefix}-${paddedNum}`;
+    case 'suffix':
+      return `${paddedNum}-${config.suffix}`;
+    case 'simple':
+    default:
+      return paddedNum;
+  }
+}
+
+/**
  * Bulk import stores from CSV
  */
 export async function bulkImportStores(
   stores: CSVStoreData[],
   organizationId: string,
   userId: string,
-  createdByName: string
-): Promise<{ success: number; failed: number; errors: string[] }> {
+  createdByName: string,
+  mode: ImportMode = 'create-new',
+  autoGenerateConfig?: AutoGenerateConfig
+): Promise<{ success: number; failed: number; errors: string[]; skipped: number; updated: number }> {
   const batch = writeBatch(db);
   const errors: string[] = [];
   let success = 0;
   let failed = 0;
+  let skipped = 0;
+  let updated = 0;
 
-  for (const store of stores) {
+  // Auto-generate Store IDs if configured
+  const processedStores = stores.map((store, index) => {
+    if (autoGenerateConfig?.enabled && (!store.storeId || store.storeId.trim() === '')) {
+      return {
+        ...store,
+        storeId: generateStoreId(index, autoGenerateConfig)
+      };
+    }
+    return store;
+  });
+
+  // Check for existing stores if mode is skip or update
+  const existingStoresMap = new Map<string, string>();
+  if (mode === 'skip' || mode === 'update') {
+    const storeIds = processedStores.map(s => s.storeId).filter(Boolean);
+    // Query existing stores in chunks due to Firestore limit
+    for (let i = 0; i < storeIds.length; i += 10) {
+      const chunk = storeIds.slice(i, i + 10);
+      const existing = await checkExistingStores(chunk, organizationId);
+      existing.forEach((docId, storeId) => existingStoresMap.set(storeId, docId));
+    }
+  }
+
+  for (const store of processedStores) {
     try {
       // Validate required fields
       if (!store.storeId || !store.storeName || !store.address || !store.city || !store.state) {
@@ -279,9 +363,71 @@ export async function bulkImportStores(
         continue;
       }
 
-      const storeData: any = {
+      const storeId = store.storeId.trim();
+      const existingDocId = existingStoresMap.get(storeId);
+
+      // Handle based on mode
+      if (existingDocId) {
+        if (mode === 'skip') {
+          skipped++;
+          continue;
+        } else if (mode === 'update') {
+          // Update existing store
+          const docRef = doc(db, COLLECTION_NAME, existingDocId);
+          const updateData: Record<string, unknown> = {
+            storeName: store.storeName.trim(),
+            address: store.address.trim(),
+            city: store.city.trim(),
+            state: store.state.trim(),
+            zipCode: store.zipCode?.trim() || '',
+            updatedAt: Timestamp.now(),
+          };
+
+          if (store.storeNumber) updateData.storeNumber = store.storeNumber.trim();
+          if (store.country) updateData.country = store.country.trim();
+          if (store.region) updateData.region = store.region.trim();
+          if (store.district) updateData.district = store.district.trim();
+          if (store.marketArea) updateData.marketArea = store.marketArea.trim();
+          if (store.storeFormat) updateData.storeFormat = store.storeFormat.trim();
+          if (store.storeManagerName) updateData.storeManagerName = store.storeManagerName.trim();
+          if (store.storeManagerEmail) updateData.storeManagerEmail = store.storeManagerEmail.trim();
+          if (store.storePhone) updateData.storePhone = store.storePhone.trim();
+          if (store.isActive !== undefined) updateData.isActive = store.isActive;
+
+          // Parse numbers
+          if (store.latitude) {
+            const lat = parseFloat(store.latitude);
+            if (!isNaN(lat)) updateData.latitude = lat;
+          }
+          if (store.longitude) {
+            const lng = parseFloat(store.longitude);
+            if (!isNaN(lng)) updateData.longitude = lng;
+          }
+          if (store.squareFootage) {
+            const sqft = parseInt(store.squareFootage);
+            if (!isNaN(sqft)) updateData.squareFootage = sqft;
+          }
+          if (store.fixtureCount) {
+            const fixtures = parseInt(store.fixtureCount);
+            if (!isNaN(fixtures)) updateData.fixtureCount = fixtures;
+          }
+
+          // Merge custom fields
+          if (store.customFields && Object.keys(store.customFields).length > 0) {
+            updateData.customFields = store.customFields;
+          }
+
+          batch.update(docRef, updateData as any);
+          updated++;
+          continue;
+        }
+        // mode === 'create-new' falls through to create
+      }
+
+      // Create new store
+      const storeData: Record<string, unknown> = {
         organizationId,
-        storeId: store.storeId.trim(),
+        storeId,
         storeName: store.storeName.trim(),
         address: store.address.trim(),
         city: store.city.trim(),
@@ -289,7 +435,7 @@ export async function bulkImportStores(
         zipCode: store.zipCode?.trim() || '',
         country: store.country?.trim() || 'USA',
         storeFormat: store.storeFormat?.trim() || 'Standard',
-        isActive: true,
+        isActive: store.isActive !== undefined ? store.isActive : true,
         createdBy: userId,
         createdByName,
         createdAt: Timestamp.now(),
@@ -337,12 +483,12 @@ export async function bulkImportStores(
     }
   }
 
-  // Commit batch (max 500 per batch, but we'll handle that with chunking if needed)
-  if (success > 0) {
+  // Commit batch (max 500 per batch)
+  if (success > 0 || updated > 0) {
     await batch.commit();
   }
 
-  return { success, failed, errors };
+  return { success, failed, errors, skipped, updated };
 }
 
 /**
