@@ -1,5 +1,8 @@
-import { DollarSign, MapPin, Building2 } from 'lucide-react';
+import { useState } from 'react';
+import { DollarSign, MapPin, Building2, Plus, X } from 'lucide-react';
 import type { ProjectFormData } from '@/services/firestore/projects';
+import { StoreAssignmentModal } from '../StoreAssignmentModal';
+import { Button } from '@/shared/components/ui/button';
 
 interface ScopeTabProps {
   formData: ProjectFormData;
@@ -7,6 +10,13 @@ interface ScopeTabProps {
 }
 
 export function ScopeTab({ formData, updateFormData }: ScopeTabProps) {
+  const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+
+  const removeStore = (storeId: string) => {
+    const updatedStores = (formData.stores || []).filter(s => s.storeId !== storeId);
+    updateFormData({ stores: updatedStores });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-4">
@@ -186,6 +196,67 @@ export function ScopeTab({ formData, updateFormData }: ScopeTabProps) {
         </div>
       </div>
 
+      {/* Stores Assignment */}
+      <div className="space-y-4 pt-6 border-t border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-gray-600" />
+            <h4 className="text-md font-semibold text-gray-900">Assigned Stores</h4>
+          </div>
+          <Button onClick={() => setIsStoreModalOpen(true)} size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            {formData.stores && formData.stores.length > 0 ? 'Manage Stores' : 'Add Stores'}
+          </Button>
+        </div>
+
+        {formData.stores && formData.stores.length > 0 ? (
+          <div className="space-y-2">
+            <div className="text-sm text-gray-600 mb-2">
+              {formData.stores.length} store{formData.stores.length !== 1 ? 's' : ''} assigned
+            </div>
+            <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+              {formData.stores.slice(0, 10).map((store) => (
+                <div
+                  key={store.storeId}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">{store.storeName}</span>
+                      <span className="text-sm text-gray-500">{store.storeId}</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      {store.city}, {store.state}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeStore(store.storeId)}
+                    className="p-1 hover:bg-red-50 rounded text-red-600"
+                    type="button"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {formData.stores.length > 10 && (
+              <p className="text-xs text-gray-500 text-center mt-2">
+                Showing 10 of {formData.stores.length} stores. Click "Manage Stores" to see all.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <Building2 className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+            <p className="text-sm text-gray-600 mb-3">No stores assigned yet</p>
+            <Button onClick={() => setIsStoreModalOpen(true)} size="sm" variant="outline">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Stores
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* Notes */}
       <div>
         <label className="block text-sm font-medium text-gray-900 mb-1">
@@ -199,6 +270,19 @@ export function ScopeTab({ formData, updateFormData }: ScopeTabProps) {
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         />
       </div>
+
+      {/* Store Assignment Modal */}
+      <StoreAssignmentModal
+        isOpen={isStoreModalOpen}
+        onClose={() => setIsStoreModalOpen(false)}
+        onAssign={(stores) => {
+          updateFormData({ stores });
+          setIsStoreModalOpen(false);
+        }}
+        currentStores={formData.stores || []}
+        chainName={formData.chainName}
+        chainType={formData.chainType}
+      />
     </div>
   );
 }
