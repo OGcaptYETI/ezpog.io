@@ -521,3 +521,47 @@ export async function getStoresByIds(storeIds: string[]): Promise<Store[]> {
 
   return stores;
 }
+
+/**
+ * Bulk delete stores by their document IDs
+ * @param storeDocIds - Array of Firestore document IDs to delete
+ * @returns Promise that resolves when deletion is complete
+ */
+export async function bulkDeleteStores(storeDocIds: string[]): Promise<void> {
+  // Process in batches of 500 (Firestore batch limit)
+  const batchSize = 500;
+  
+  for (let i = 0; i < storeDocIds.length; i += batchSize) {
+    const batch = writeBatch(db);
+    const batchIds = storeDocIds.slice(i, i + batchSize);
+    
+    batchIds.forEach(docId => {
+      const docRef = doc(db, COLLECTION_NAME, docId);
+      batch.delete(docRef);
+    });
+    
+    await batch.commit();
+  }
+}
+
+/**
+ * Delete ALL stores for an organization
+ * ⚠️ DANGEROUS OPERATION - Use with extreme caution
+ * @param organizationId - Organization ID
+ * @returns Number of stores deleted
+ */
+export async function deleteAllStoresForOrganization(organizationId: string): Promise<number> {
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where('organizationId', '==', organizationId)
+  );
+  
+  const querySnapshot = await getDocs(q);
+  const storeIds = querySnapshot.docs.map(doc => doc.id);
+  
+  if (storeIds.length === 0) return 0;
+  
+  await bulkDeleteStores(storeIds);
+  
+  return storeIds.length;
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/features/auth';
-import { getStoresByOrganization, type Store } from '@/services/firestore/stores';
-import { Building2, Plus, Search, Upload, MapPin, Phone, User, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { getStoresByOrganization, bulkDeleteStores, deleteAllStoresForOrganization, type Store } from '@/services/firestore/stores';
+import { Building2, Plus, Search, Upload, MapPin, Phone, User, Filter, ArrowUpDown, ArrowUp, ArrowDown, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
@@ -27,6 +27,12 @@ export default function StoresPage() {
   const [filterState, setFilterState] = useState('');
   const [filterFormat, setFilterFormat] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+  
+  // Bulk operations state
+  const [selectedStores, setSelectedStores] = useState<Set<string>>(new Set());
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [showDeleteSelectedModal, setShowDeleteSelectedModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // RBAC permissions
   const canCreate = user?.role === 'admin' || user?.role === 'manager';
@@ -46,6 +52,63 @@ export default function StoresPage() {
       showToast('Failed to load stores', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Bulk operation handlers
+  const handleToggleSelect = (storeId: string) => {
+    setSelectedStores(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(storeId)) {
+        newSet.delete(storeId);
+      } else {
+        newSet.add(storeId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedStores.size === filteredStores.length) {
+      setSelectedStores(new Set());
+    } else {
+      setSelectedStores(new Set(filteredStores.map(s => s.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedStores.size === 0) return;
+    
+    setDeleting(true);
+    try {
+      await bulkDeleteStores(Array.from(selectedStores));
+      showToast(`Successfully deleted ${selectedStores.size} stores`, 'success');
+      setSelectedStores(new Set());
+      setShowDeleteSelectedModal(false);
+      await loadStores();
+    } catch (error) {
+      console.error('Error deleting stores:', error);
+      showToast('Failed to delete stores', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!user?.organizationId) return;
+    
+    setDeleting(true);
+    try {
+      const count = await deleteAllStoresForOrganization(user.organizationId);
+      showToast(`Successfully deleted all ${count} stores`, 'success');
+      setShowDeleteAllModal(false);
+      setSelectedStores(new Set());
+      await loadStores();
+    } catch (error) {
+      console.error('Error deleting all stores:', error);
+      showToast('Failed to delete stores', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -141,6 +204,16 @@ export default function StoresPage() {
           </div>
           {canCreate && (
             <div className="flex gap-3">
+              {stores.length > 0 && (
+                <Button 
+                  onClick={() => setShowDeleteAllModal(true)} 
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete All Stores
+                </Button>
+              )}
               <Button onClick={() => setIsImportModalOpen(true)} variant="outline">
                 <Upload className="w-4 h-4 mr-2" />
                 Import CSV
@@ -153,6 +226,33 @@ export default function StoresPage() {
           )}
         </div>
       </div>
+
+      {/* Bulk Actions Toolbar */}
+      {selectedStores.size > 0 && (
+        <div className="mb-6 bg-indigo-50 border-2 border-indigo-300 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <p className="text-sm font-semibold text-indigo-900">
+                {selectedStores.size} store{selectedStores.size !== 1 ? 's' : ''} selected
+              </p>
+              <button
+                onClick={() => setSelectedStores(new Set())}
+                className="text-sm text-indigo-600 hover:text-indigo-700"
+              >
+                Clear selection
+              </button>
+            </div>
+            <Button
+              onClick={() => setShowDeleteSelectedModal(true)}
+              variant="outline"
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Selected ({selectedStores.size})
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Search Bar and Filters */}
       <div className="mb-6 space-y-4">
@@ -326,6 +426,16 @@ export default function StoresPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                {/* Select All Checkbox */}
+                <th className="px-6 py-3">
+                  <input
+                    type="checkbox"
+                    checked={filteredStores.length > 0 && selectedStores.size === filteredStores.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 text-indigo-600 rounded"
+                  />
+                </th>
+
                 {/* Sortable Store Column */}
                 <th 
                   onClick={() => handleSort('storeName')}
@@ -396,6 +506,17 @@ export default function StoresPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredStores.map((store) => (
                 <tr key={store.id} className="hover:bg-gray-50">
+                  {/* Checkbox Cell */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedStores.has(store.id)}
+                      onChange={() => handleToggleSelect(store.id)}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                  </td>
+
+                  {/* Store Info Cell */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <Building2 className="w-5 h-5 text-gray-400 mr-3" />
@@ -469,6 +590,118 @@ export default function StoresPage() {
           setIsImportModalOpen(false);
         }}
       />
+
+      {/* Delete Selected Confirmation Modal */}
+      {showDeleteSelectedModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-start gap-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Selected Stores?</h3>
+                <p className="text-sm text-gray-600">
+                  You are about to delete <span className="font-bold text-red-600">{selectedStores.size} store{selectedStores.size !== 1 ? 's' : ''}</span>.
+                </p>
+                <p className="text-sm text-red-600 font-semibold mt-2">
+                  ⚠️ This action cannot be undone!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                onClick={() => setShowDeleteSelectedModal(false)}
+                variant="outline"
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteSelected}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete {selectedStores.size} Store{selectedStores.size !== 1 ? 's' : ''}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-start gap-3 mb-4">
+              <AlertTriangle className="w-8 h-8 text-red-600 flex-shrink-0" />
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">⚠️ DELETE ALL STORES?</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  You are about to delete <span className="font-bold text-red-600">ALL {stores.length} STORES</span> in your organization.
+                </p>
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3 mb-3">
+                  <p className="text-sm font-bold text-red-900">🛑 DANGER ZONE</p>
+                  <ul className="text-xs text-red-800 mt-2 space-y-1 list-disc list-inside">
+                    <li>All store data will be permanently deleted</li>
+                    <li>This action CANNOT be undone</li>
+                    <li>You will need to re-import from CSV</li>
+                  </ul>
+                </div>
+                <p className="text-sm text-gray-700 font-medium">
+                  Type <span className="font-mono bg-gray-100 px-2 py-1 rounded">DELETE ALL</span> to confirm:
+                </p>
+                <input
+                  type="text"
+                  placeholder="Type DELETE ALL"
+                  onChange={(e) => {
+                    const btn = document.getElementById('delete-all-btn') as HTMLButtonElement;
+                    if (btn) btn.disabled = e.target.value !== 'DELETE ALL';
+                  }}
+                  className="w-full mt-2 px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                onClick={() => setShowDeleteAllModal(false)}
+                variant="outline"
+                disabled={deleting}
+              >
+                Cancel - Keep My Stores
+              </Button>
+              <Button
+                id="delete-all-btn"
+                onClick={handleDeleteAll}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={true}
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Deleting All...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete All {stores.length} Stores
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
