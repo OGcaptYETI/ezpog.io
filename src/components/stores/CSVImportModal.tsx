@@ -257,11 +257,12 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
                   className="hidden"
                   id="csv-upload"
                 />
-                <label htmlFor="csv-upload">
-                  <Button as="span">
-                    Select File
-                  </Button>
-                </label>
+                <button
+                  onClick={() => document.getElementById('csv-upload')?.click()}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Select File
+                </button>
               </div>
             </div>
           )}
