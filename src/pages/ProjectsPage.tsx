@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth';
 import { getProjectsByOrganization, deleteProject } from '@/services/firestore/projects';
 import type { Project } from '@/types';
-import { FolderKanban, Plus, Search, Grid3x3, List, Filter, MoreVertical, Edit, Trash2, Lock, Calendar, Users, TrendingUp } from 'lucide-react';
+import { FolderKanban, Plus, Search, Grid3x3, List, Filter, Lock } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { ProjectModal } from '@/components/projects/ProjectModal';
+import { ProjectCard } from '@/components/projects/ProjectCard';
 
 type ViewMode = 'grid' | 'list';
 
@@ -16,7 +17,6 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: '' as '' | 'draft' | 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled',
     projectType: '' as '' | 'reset' | 'refresh' | 'new_store' | 'seasonal' | 'remodel' | 'compliance_check' | 'emergency',
@@ -76,7 +76,6 @@ export default function ProjectsPage() {
     setModalMode('edit');
     setSelectedProject(project);
     setIsModalOpen(true);
-    setOpenMenuId(null);
   };
 
   const handleDelete = async (projectId: string) => {
@@ -89,7 +88,6 @@ export default function ProjectsPage() {
     try {
       await deleteProject(projectId);
       await loadProjects();
-      setOpenMenuId(null);
       showToast('Project deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting project:', error);
@@ -240,134 +238,20 @@ export default function ProjectsPage() {
         </div>
       ) : (
         /* Projects List/Grid */
-        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-3'}>
           {filteredProjects.map((project) => (
-            <div
+            <ProjectCard
               key={project.id}
-              className="bg-white rounded-lg shadow hover:shadow-lg transition-all p-6 relative"
-            >
-              {/* Project Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{project.name}</h3>
-                  <p className="text-sm text-gray-500">{project.projectId}</p>
-                </div>
-                
-                {/* Actions Menu */}
-                <div className="relative">
-                  <button
-                    onClick={() => setOpenMenuId(openMenuId === project.id ? null : project.id)}
-                    className="p-1 hover:bg-gray-100 rounded"
-                  >
-                    <MoreVertical className="w-5 h-5 text-gray-600" />
-                  </button>
-                  
-                  {openMenuId === project.id && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                      {canEdit ? (
-                        <button
-                          onClick={() => handleEditProject(project)}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          className="w-full px-4 py-2 text-left text-gray-400 flex items-center gap-2 cursor-not-allowed"
-                        >
-                          <Lock className="w-4 h-4" />
-                          Edit (No Permission)
-                        </button>
-                      )}
-                      {canDelete ? (
-                        <button
-                          onClick={() => handleDelete(project.id)}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          className="w-full px-4 py-2 text-left text-gray-400 flex items-center gap-2 cursor-not-allowed"
-                        >
-                          <Lock className="w-4 h-4" />
-                          Delete (No Permission)
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Description */}
-              {project.description && (
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{project.description}</p>
-              )}
-
-              {/* Badges */}
-              <div className="flex gap-2 mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                  {project.status}
-                </span>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(project.priority)}`}>
-                  {project.priority}
-                </span>
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                  {project.projectType.replace('_', ' ')}
-                </span>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center">
-                  <div className="flex items-center justify-center mb-1">
-                    <TrendingUp className="w-4 h-4 text-gray-500" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">{project.completionPercentage || 0}%</div>
-                  <div className="text-xs text-gray-500">Complete</div>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center mb-1">
-                    <Users className="w-4 h-4 text-gray-500" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">{project.teamMembers?.length || 0}</div>
-                  <div className="text-xs text-gray-500">Team</div>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center mb-1">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900">{project.totalStores || 0}</div>
-                  <div className="text-xs text-gray-500">Stores</div>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>Progress</span>
-                  <span>{project.completedStores || 0} / {project.totalStores || 0} stores</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-indigo-600 h-2 rounded-full transition-all"
-                    style={{ width: `${project.completionPercentage || 0}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Start: {formatDate(project.startDate)}</span>
-                  <span>Target: {formatDate(project.targetEndDate)}</span>
-                </div>
-              </div>
-            </div>
+              project={project}
+              viewMode={viewMode}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onEdit={handleEditProject}
+              onDelete={handleDelete}
+              formatDate={formatDate}
+              getStatusColor={getStatusColor}
+              getPriorityColor={getPriorityColor}
+            />
           ))}
         </div>
       )}

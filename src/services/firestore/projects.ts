@@ -244,19 +244,19 @@ export async function getProjectsByOrganization(
 export async function updateProject(id: string, data: Partial<ProjectFormData>): Promise<void> {
   const docRef = doc(db, COLLECTION_NAME, id);
   
-  // Remove undefined values
-  const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
-    if (value !== undefined) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, any>);
-  
-  // Convert dates to Timestamps if present
-  const updateData: Record<string, any> = {
-    ...cleanData,
+  // Build update data with proper Timestamp conversions
+  const updateData: any = {
     updatedAt: Timestamp.now(),
   };
+
+  // Only include fields that are actually being updated
+  if (data.projectId !== undefined) updateData.projectId = data.projectId;
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.projectType !== undefined) updateData.projectType = data.projectType;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.priority !== undefined) updateData.priority = data.priority;
+  if (data.currency !== undefined) updateData.currency = data.currency;
   
   if (data.startDate) {
     updateData.startDate = Timestamp.fromDate(data.startDate);
@@ -267,25 +267,60 @@ export async function updateProject(id: string, data: Partial<ProjectFormData>):
   if (data.actualEndDate) {
     updateData.actualEndDate = Timestamp.fromDate(data.actualEndDate);
   }
-  if (data.milestones) {
-    updateData.milestones = data.milestones.map(m => ({
-      ...m,
-      targetDate: Timestamp.fromDate(m.targetDate),
-      completedDate: m.completedDate ? Timestamp.fromDate(m.completedDate) : undefined,
-    }));
-  }
   
-  // Update store counts if stores array is updated
-  if (data.stores) {
+  if (data.milestones) {
+    updateData.milestones = data.milestones.map(m => {
+      const milestone: any = {
+        id: m.id,
+        name: m.name,
+        targetDate: Timestamp.fromDate(m.targetDate),
+        completed: m.completed,
+      };
+      if (m.completedDate) {
+        milestone.completedDate = Timestamp.fromDate(m.completedDate);
+      }
+      return milestone;
+    });
+  }
+
+  if (data.estimatedBudget !== undefined && data.estimatedBudget !== null) {
+    updateData.estimatedBudget = data.estimatedBudget;
+  }
+  if (data.actualBudget !== undefined && data.actualBudget !== null) {
+    updateData.actualBudget = data.actualBudget;
+  }
+  if (data.estimatedLaborHours !== undefined && data.estimatedLaborHours !== null) {
+    updateData.estimatedLaborHours = data.estimatedLaborHours;
+  }
+  if (data.actualLaborHours !== undefined && data.actualLaborHours !== null) {
+    updateData.actualLaborHours = data.actualLaborHours;
+  }
+
+  if (data.chainName !== undefined) updateData.chainName = data.chainName;
+  if (data.chainType !== undefined) updateData.chainType = data.chainType;
+  if (data.region !== undefined) updateData.region = data.region;
+  if (data.district !== undefined) updateData.district = data.district;
+  if (data.tags !== undefined) updateData.tags = data.tags;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  
+  if (data.stores !== undefined) {
+    updateData.stores = data.stores;
     updateData.totalStores = data.stores.length;
     updateData.completedStores = data.stores.filter(s => s.status === 'completed').length;
     updateData.inProgressStores = data.stores.filter(s => s.status === 'in_progress').length;
     updateData.completionPercentage = data.stores.length > 0 
-      ? Math.round((updateData.completedStores as number / data.stores.length) * 100)
+      ? Math.round((updateData.completedStores / data.stores.length) * 100)
       : 0;
   }
+
+  if (data.teamMembers !== undefined) {
+    updateData.teamMembers = data.teamMembers;
+  }
+
+  // Final cleanup to ensure no undefined values
+  const cleanedData = removeUndefined(updateData);
   
-  await updateDoc(docRef, updateData);
+  await updateDoc(docRef, cleanedData);
 }
 
 /**
