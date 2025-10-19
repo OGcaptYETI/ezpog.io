@@ -4,7 +4,7 @@ import { useAuth } from '@/features/auth';
 import { bulkImportStores, type CSVStoreData } from '@/services/firestore/stores';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
-import { CSVFieldMapper, type FieldMapping } from './CSVFieldMapper';
+import { CSVFieldMapper, type FieldMapping, type CustomFieldMapping } from './CSVFieldMapper';
 
 interface CSVImportModalProps {
   isOpen: boolean;
@@ -22,6 +22,7 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvData, setCsvData] = useState<Record<string, string>[]>([]);
   const [fieldMapping, setFieldMapping] = useState<FieldMapping>({});
+  const [customFieldMappings, setCustomFieldMappings] = useState<CustomFieldMapping[]>([]);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<CSVStoreData[]>([]);
   const [importResult, setImportResult] = useState<{
@@ -69,20 +70,32 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
     setCsvData(allData);
   };
 
-  const handleMappingComplete = (mapping: FieldMapping) => {
+  const handleMappingComplete = (mapping: FieldMapping, customMappings?: CustomFieldMapping[]) => {
     setFieldMapping(mapping);
-    generatePreview(mapping);
+    setCustomFieldMappings(customMappings || []);
+    generatePreview(mapping, customMappings || []);
     setStep('preview');
   };
 
-  const generatePreview = (mapping: FieldMapping) => {
+  const generatePreview = (mapping: FieldMapping, customMappings: CustomFieldMapping[]) => {
     const previewData: CSVStoreData[] = csvData.slice(0, 5).map(row => {
       const mapped: any = {};
+      const customFields: Record<string, string> = {};
       
       for (const [csvCol, systemField] of Object.entries(mapping)) {
         if (systemField && row[csvCol]) {
-          mapped[systemField] = row[csvCol];
+          // Check if this is a custom field
+          const customMapping = customMappings.find(cm => cm.customField.id === systemField);
+          if (customMapping) {
+            customFields[customMapping.customField.name] = row[csvCol];
+          } else {
+            mapped[systemField] = row[csvCol];
+          }
         }
+      }
+      
+      if (Object.keys(customFields).length > 0) {
+        mapped.customFields = customFields;
       }
       
       return mapped as CSVStoreData;
@@ -100,17 +113,33 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
     try {
       const stores: CSVStoreData[] = csvData.map(row => {
         const mapped: any = {};
+        const customFields: Record<string, string> = {};
         
         for (const [csvCol, systemField] of Object.entries(fieldMapping)) {
           if (systemField && row[csvCol]) {
-            mapped[systemField] = row[csvCol];
+            // Check if this is a custom field
+            const customMapping = customFieldMappings.find(cm => cm.customField.id === systemField);
+            if (customMapping) {
+              customFields[customMapping.customField.name] = row[csvCol];
+            } else {
+              mapped[systemField] = row[csvCol];
+            }
           }
+        }
+        
+        if (Object.keys(customFields).length > 0) {
+          mapped.customFields = customFields;
         }
         
         return mapped as CSVStoreData;
       });
 
-      const result = await bulkImportStores(stores, user.organizationId);
+      const result = await bulkImportStores(
+        stores,
+        user.organizationId,
+        user.uid,
+        user.displayName || user.email || 'Unknown'
+      );
       
       setImportResult(result);
       setStep('complete');

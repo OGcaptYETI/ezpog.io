@@ -109,6 +109,7 @@ export interface CSVStoreData {
   storeManagerName?: string;
   storeManagerEmail?: string;
   storePhone?: string;
+  customFields?: Record<string, string | number | boolean>;
 }
 
 const COLLECTION_NAME = 'stores';
@@ -320,6 +321,11 @@ export async function bulkImportStores(
       if (store.fixtureCount) {
         const fixtures = parseInt(store.fixtureCount);
         if (!isNaN(fixtures)) storeData.fixtureCount = fixtures;
+      }
+      
+      // Add custom fields if present
+      if (store.customFields && Object.keys(store.customFields).length > 0) {
+        storeData.customFields = store.customFields;
       }
 
       const newDocRef = doc(collection(db, COLLECTION_NAME));

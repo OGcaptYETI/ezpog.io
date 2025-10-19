@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowRight, AlertCircle, CheckCircle2, Plus, X } from 'lucide-react';
+import { ArrowRight, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
 import type { CustomFieldDefinition } from '@/types';
+import { AddCustomFieldModal } from './AddCustomFieldModal';
 
 export interface FieldMapping {
   [csvColumn: string]: string; // Maps CSV column name to system field name (or custom field ID)
@@ -49,6 +50,8 @@ interface CSVFieldMapperProps {
 }
 
 export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData, existingCustomFields = [] }: CSVFieldMapperProps) {
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>(existingCustomFields);
+  const [isAddFieldModalOpen, setIsAddFieldModalOpen] = useState(false);
   const [mapping, setMapping] = useState<FieldMapping>(() => {
     // Auto-detect common mappings
     const autoMapping: FieldMapping = {};
@@ -124,8 +127,22 @@ export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData, exis
     };
   };
 
+  const handleAddCustomField = (field: CustomFieldDefinition) => {
+    setCustomFields(prev => [...prev, field]);
+  };
+
   const handleContinue = () => {
-    onMappingComplete(mapping);
+    // Collect custom field mappings
+    const customFieldMappings: CustomFieldMapping[] = [];
+    
+    Object.entries(mapping).forEach(([csvCol, fieldId]) => {
+      const customField = customFields.find(f => f.id === fieldId);
+      if (customField) {
+        customFieldMappings.push({ csvColumn: csvCol, customField });
+      }
+    });
+    
+    onMappingComplete(mapping, customFieldMappings.length > 0 ? customFieldMappings : undefined);
   };
 
   const requiredStatus = getRequiredFieldsStatus();
@@ -164,7 +181,16 @@ export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData, exis
 
       {/* Field Mappings */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900">Map Your CSV Columns to System Fields</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">Map Your CSV Columns to System Fields</h3>
+          <button
+            onClick={() => setIsAddFieldModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Custom Field
+          </button>
+        </div>
         
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {csvHeaders.map((csvCol, index) => {
@@ -202,11 +228,24 @@ export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData, exis
                       }`}
                     >
                       <option value="">-- Skip this column --</option>
-                      {SYSTEM_FIELDS.map(field => (
-                        <option key={field.systemName} value={field.systemName}>
-                          {field.label} {field.required ? '(Required)' : ''}
-                        </option>
-                      ))}
+                      
+                      <optgroup label="System Fields">
+                        {SYSTEM_FIELDS.map(field => (
+                          <option key={field.systemName} value={field.systemName}>
+                            {field.label} {field.required ? '(Required)' : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                      
+                      {customFields.length > 0 && (
+                        <optgroup label="Custom Fields">
+                          {customFields.map(field => (
+                            <option key={field.id} value={field.id}>
+                              {field.label} (Custom)
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
                   </div>
                 </div>
@@ -223,6 +262,9 @@ export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData, exis
           <p><strong>Required Fields:</strong> storeId, storeName, address, city, state</p>
           <p><strong>Optional Fields:</strong> All others can be skipped if not available</p>
           <p><strong>Auto-Detection:</strong> Common column names are automatically mapped</p>
+          {customFields.length > 0 && (
+            <p><strong>Custom Fields:</strong> {customFields.length} custom field(s) created for this import</p>
+          )}
         </div>
       </div>
 
@@ -240,6 +282,14 @@ export function CSVFieldMapper({ csvHeaders, onMappingComplete, sampleData, exis
           Continue to Preview
         </button>
       </div>
+
+      {/* Add Custom Field Modal */}
+      <AddCustomFieldModal
+        isOpen={isAddFieldModalOpen}
+        onClose={() => setIsAddFieldModalOpen(false)}
+        onAdd={handleAddCustomField}
+        existingFields={customFields}
+      />
     </div>
   );
 }
