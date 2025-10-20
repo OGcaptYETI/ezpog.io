@@ -8,6 +8,7 @@ import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
 import { AssignToFieldTeamModal } from '@/components/stores/AssignToFieldTeamModal';
 import { AssignToUserModal } from '@/components/stores/AssignToUserModal';
+import { AssignToProjectModal } from '@/components/stores/AssignToProjectModal';
 
 type SortField = 'storeName' | 'storeId' | 'city' | 'state' | 'region' | 'storeFormat';
 type SortDirection = 'asc' | 'desc';
@@ -41,6 +42,7 @@ export default function StoresPage() {
   const [showAssignmentMenu, setShowAssignmentMenu] = useState(false);
   
   // Assignment modals state
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [showFieldTeamModal, setShowFieldTeamModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   
@@ -296,7 +298,7 @@ export default function StoresPage() {
                     <div className="py-1">
                       <button
                         onClick={() => {
-                          showToast('Project assignment coming soon!', 'info');
+                          setShowProjectModal(true);
                           setShowAssignmentMenu(false);
                         }}
                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3"
@@ -846,6 +848,17 @@ export default function StoresPage() {
         onSuccess={() => {
           loadStores();
           setIsImportModalOpen(false);
+        }}
+      />
+
+      {/* Assign to Project Modal */}
+      <AssignToProjectModal
+        isOpen={showProjectModal}
+        onClose={() => setShowProjectModal(false)}
+        selectedStoreIds={Array.from(selectedStores)}
+        onSuccess={() => {
+          loadStores();
+          setSelectedStores(new Set());
         }}
       />
 
