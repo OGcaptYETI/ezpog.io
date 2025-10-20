@@ -2,7 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { getStoresByOrganization, bulkDeleteStores, deleteAllStoresForOrganization, type Store } from '@/services/firestore/stores';
+import { getProjectsByOrganization } from '@/services/firestore/projects';
 import { Building2, Plus, Search, Upload, MapPin, Filter, ArrowUp, ArrowDown, Trash2, AlertTriangle, ChevronRight, ChevronDown, Mail, FileText, Briefcase, Users } from 'lucide-react';
+import type { Project } from '@/types';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
@@ -33,6 +35,11 @@ export default function StoresPage() {
   const [filterState, setFilterState] = useState('');
   const [filterFormat, setFilterFormat] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterProject, setFilterProject] = useState('');
+  
+  // Projects for filtering
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   
   // Bulk operations state
   const [selectedStores, setSelectedStores] = useState<Set<string>>(new Set());
@@ -56,6 +63,8 @@ export default function StoresPage() {
 
   useEffect(() => {
     loadStores();
+    loadProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.organizationId]);
 
   const loadStores = async () => {
@@ -69,6 +78,20 @@ export default function StoresPage() {
       showToast('Failed to load stores', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProjects = async () => {
+    if (!user?.organizationId) return;
+
+    try {
+      setLoadingProjects(true);
+      const projectsData = await getProjectsByOrganization(user.organizationId);
+      setProjects(projectsData);
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    } finally {
+      setLoadingProjects(false);
     }
   };
 
@@ -206,6 +229,18 @@ export default function StoresPage() {
       if (filterActive === 'active' && !s.isActive) return false;
       if (filterActive === 'inactive' && s.isActive) return false;
       
+      // Project filter - check if store is in selected project's assignedStores
+      if (filterProject) {
+        const selectedProject = projects.find(p => p.id === filterProject);
+        if (selectedProject && selectedProject.assignedStores) {
+          if (!selectedProject.assignedStores.includes(s.id)) {
+            return false;
+          }
+        } else {
+          return false; // Project not found or has no stores
+        }
+      }
+      
       return true;
     });
 
@@ -223,7 +258,7 @@ export default function StoresPage() {
     });
 
     return filtered;
-  }, [stores, searchTerm, searchField, filterRegion, filterState, filterFormat, filterActive, sortField, sortDirection]);
+  }, [stores, searchTerm, searchField, filterProject, filterRegion, filterState, filterFormat, filterActive, sortField, sortDirection, projects]);
 
   if (loading) {
     return (
@@ -386,9 +421,9 @@ export default function StoresPage() {
           >
             <Filter className="w-4 h-4" />
             Filters
-            {(filterRegion || filterState || filterFormat || filterActive !== 'all') && (
+            {(filterProject || filterRegion || filterState || filterFormat || filterActive !== 'all') && (
               <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {[filterRegion, filterState, filterFormat, filterActive !== 'all'].filter(Boolean).length}
+                {[filterProject, filterRegion, filterState, filterFormat, filterActive !== 'all'].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -397,7 +432,27 @@ export default function StoresPage() {
         {/* Filters Panel */}
         {showFilters && (
           <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Briefcase className="w-4 h-4 inline mr-1" />
+                  Project
+                </label>
+                <select
+                  value={filterProject}
+                  onChange={(e) => setFilterProject(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  disabled={loadingProjects}
+                >
+                  <option value="">All Projects</option>
+                  {projects.map(project => (
+                    <option key={project.id} value={project.id}>
+                      {project.name} ({project.assignedStores?.length || 0} stores)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
                 <select
@@ -455,9 +510,10 @@ export default function StoresPage() {
             </div>
 
             {/* Clear Filters */}
-            {(filterRegion || filterState || filterFormat || filterActive !== 'all') && (
+            {(filterProject || filterRegion || filterState || filterFormat || filterActive !== 'all') && (
               <button
                 onClick={() => {
+                  setFilterProject('');
                   setFilterRegion('');
                   setFilterState('');
                   setFilterFormat('');
