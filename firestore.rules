@@ -327,9 +327,26 @@ service cloud.firestore {
     }
     
     // ============================================
-    // FIELD TEAMS COLLECTION
+    // FIELD TEAMS COLLECTION (fieldTeams)
     // ============================================
     
+    match /fieldTeams/{teamId} {
+      // All org members can read field teams
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      
+      // Admins and managers can create field teams
+      allow create: if isAuthenticated() && 
+                       belongsToOrg(request.resource.data.organizationId) &&
+                       isAdminOrManager(request.resource.data.organizationId);
+      
+      // Admins and managers can update field teams
+      allow update: if isAuthenticated() && isAdminOrManager(resource.data.organizationId);
+      
+      // Admins and managers can delete field teams
+      allow delete: if isAuthenticated() && isAdminOrManager(resource.data.organizationId);
+    }
+    
+    // Legacy field-teams collection (keeping for backwards compatibility)
     match /field-teams/{teamId} {
       allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
       allow write: if isAdminOrManager(resource.data.organizationId);
