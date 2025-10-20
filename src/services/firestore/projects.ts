@@ -62,6 +62,7 @@ export interface ProjectFormData {
   
   // Team
   teamMembers?: ProjectMember[];
+  assignedTeams?: string[]; // Field team IDs
   
   // Metadata
   tags?: string[];

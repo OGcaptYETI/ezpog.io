@@ -149,7 +149,9 @@ export function ProjectModal({ isOpen, onClose, onSave, project, mode }: Project
           region: project.region,
           district: project.district,
           stores, // Use loaded store data
+          assignedStores: project.assignedStores, // Keep IDs
           teamMembers: project.teamMembers,
+          assignedTeams: project.assignedTeams, // Keep team IDs
           tags: project.tags,
           notes: project.notes,
         });
