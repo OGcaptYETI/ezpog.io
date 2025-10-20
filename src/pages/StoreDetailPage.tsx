@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/services/firebase/config';
 import { type Store } from '@/services/firestore/stores';
+import type { Project } from '@/types';
 import { 
   Building2, ArrowLeft, MapPin, Phone, Mail, User, Edit, Calendar, 
   CheckCircle, XCircle, Camera, Briefcase, History, Package, Settings, 
@@ -30,6 +31,8 @@ export default function StoreDetailPage() {
   const [showResetHistory, setShowResetHistory] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [settingFeatured, setSettingFeatured] = useState(false);
+  const [assignedProjects, setAssignedProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   // RBAC
   const canEdit = user?.role === 'admin' || user?.role === 'manager';
@@ -38,6 +41,13 @@ export default function StoreDetailPage() {
     loadStore();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId]);
+
+  useEffect(() => {
+    if (store) {
+      loadAssignedProjects();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
 
   const loadStore = async () => {
     if (!storeId) {
@@ -61,6 +71,32 @@ export default function StoreDetailPage() {
       showToast('Failed to load store details', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAssignedProjects = async () => {
+    if (!store || !user?.organizationId) return;
+
+    setLoadingProjects(true);
+    try {
+      // Query projects where assignedStores array contains this store's ID
+      const projectsQuery = query(
+        collection(db, 'projects'),
+        where('organizationId', '==', user.organizationId),
+        where('assignedStores', 'array-contains', store.id)
+      );
+      
+      const projectsSnapshot = await getDocs(projectsQuery);
+      const projectsData = projectsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Project[];
+      
+      setAssignedProjects(projectsData);
+    } catch (error) {
+      console.error('Error loading assigned projects:', error);
+    } finally {
+      setLoadingProjects(false);
     }
   };
 
@@ -432,21 +468,67 @@ export default function StoreDetailPage() {
         <AccordionItem 
           title="Assigned Projects" 
           icon={<Briefcase className="w-5 h-5" />}
-          badge={0}
+          badge={assignedProjects.length}
         >
-          <div className="text-center py-8">
-            <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 mb-4">No projects assigned yet</p>
-            {canEdit && (
-              <Button
-                onClick={() => setShowProjectAssignment(true)}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Briefcase className="w-4 h-4 mr-2" />
-                Assign to Project
-              </Button>
-            )}
-          </div>
+          {loadingProjects ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto" />
+            </div>
+          ) : assignedProjects.length > 0 ? (
+            <div className="space-y-3">
+              {assignedProjects.map((project) => (
+                <Link
+                  key={project.id}
+                  to={`/dashboard/projects/${project.id}`}
+                  className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-1">{project.name}</h4>
+                      <p className="text-sm text-gray-600 mb-2">{project.projectId}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          project.status === 'active' ? 'bg-green-100 text-green-700' :
+                          project.status === 'planning' ? 'bg-blue-100 text-blue-700' :
+                          project.status === 'completed' ? 'bg-gray-100 text-gray-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {project.status}
+                        </span>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          project.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                          project.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                          project.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {project.priority}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500 ml-4">
+                      <div className="text-right">
+                        <span className="font-medium">{project.assignedStores?.length || 0}</span> stores
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 mb-4">No projects assigned yet</p>
+              {canEdit && (
+                <Button
+                  onClick={() => setShowProjectAssignment(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  Assign to Project
+                </Button>
+              )}
+            </div>
+          )}
         </AccordionItem>
 
         {/* Reset History */}
