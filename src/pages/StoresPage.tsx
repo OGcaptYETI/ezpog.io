@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { getStoresByOrganization, bulkDeleteStores, deleteAllStoresForOrganization, type Store } from '@/services/firestore/stores';
@@ -562,9 +562,9 @@ export default function StoresPage() {
               {filteredStores.map((store) => {
                 const isExpanded = expandedRows.has(store.id);
                 return (
-                  <>
+                  <React.Fragment key={store.id}>
                     {/* Main Compact Row */}
-                    <tr key={store.id} className="hover:bg-gray-50 text-sm">
+                    <tr className="hover:bg-gray-50 text-sm">
                       {/* Checkbox - Admin Only */}
                       {canDelete && (
                         <td className="px-3 py-2">
@@ -737,7 +737,7 @@ export default function StoresPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
