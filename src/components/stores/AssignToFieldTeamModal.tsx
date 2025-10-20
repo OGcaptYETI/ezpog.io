@@ -39,12 +39,12 @@ export function AssignToFieldTeamModal({
   }, [isOpen]);
 
   const loadFieldTeams = async () => {
+    // TODO: Implement actual loading from Firestore
+    // This will be completed in Phase 6 when we wire up the assignment functionality
     setLoading(true);
     try {
-      // TODO: Replace with actual Firestore query in Phase 6
-      // For now, return empty array - functionality will be added in Phase 3/6
+      // Placeholder - will load from getFieldTeamsByOrganization()
       setTeams([]);
-      showToast('Field Teams feature coming in Phase 3!', 'info');
     } catch (error) {
       console.error('Error loading field teams:', error);
       showToast('Failed to load field teams', 'error');
