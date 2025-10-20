@@ -131,7 +131,7 @@ export default function FieldTeamsPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
           {teams.map(team => (
             <FieldTeamCard
               key={team.id}
