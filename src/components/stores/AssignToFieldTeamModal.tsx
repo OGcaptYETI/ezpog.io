@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Users, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
+import { useAuth } from '@/features/auth';
 
 interface AssignToFieldTeamModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function AssignToFieldTeamModal({
   selectedStoreIds,
   onSuccess
 }: AssignToFieldTeamModalProps) {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,12 +41,13 @@ export function AssignToFieldTeamModal({
   }, [isOpen]);
 
   const loadFieldTeams = async () => {
-    // TODO: Implement actual loading from Firestore
-    // This will be completed in Phase 6 when we wire up the assignment functionality
+    if (!user?.organizationId) return;
+    
     setLoading(true);
     try {
-      // Placeholder - will load from getFieldTeamsByOrganization()
-      setTeams([]);
+      const { getFieldTeamsByOrganization } = await import('@/services/firestore/fieldTeams');
+      const teamsData = await getFieldTeamsByOrganization(user.organizationId);
+      setTeams(teamsData);
     } catch (error) {
       console.error('Error loading field teams:', error);
       showToast('Failed to load field teams', 'error');
@@ -81,11 +84,16 @@ export function AssignToFieldTeamModal({
 
     setSaving(true);
     try {
-      // TODO: Implement in Phase 6
-      // await assignStoresToTeams(Array.from(selectedTeams), selectedStoreIds);
+      const { assignStoresToTeam } = await import('@/services/firestore/fieldTeams');
+      
+      // Assign stores to each selected team
+      const teamIds = Array.from(selectedTeams);
+      await Promise.all(
+        teamIds.map(teamId => assignStoresToTeam(teamId, selectedStoreIds))
+      );
       
       showToast(
-        `Successfully assigned ${selectedStoreIds.length} stores to ${selectedTeams.size} team(s)`,
+        `Successfully assigned ${selectedStoreIds.length} store(s) to ${selectedTeams.size} team(s)!`,
         'success'
       );
       onSuccess();
