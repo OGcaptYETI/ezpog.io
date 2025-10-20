@@ -12,6 +12,9 @@ import {
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { Accordion, AccordionItem } from '@/components/ui/Accordion';
+import { EditStoreModal } from '@/components/stores/EditStoreModal';
+import { ImageUploadModal } from '@/components/stores/ImageUploadModal';
+import { ProjectAssignmentModal } from '@/components/stores/ProjectAssignmentModal';
 
 export default function StoreDetailPage() {
   const { storeId } = useParams<{ storeId: string }>();
@@ -397,35 +400,35 @@ export default function StoreDetailPage() {
         </AccordionItem>
       </Accordion>
 
-      {/* Placeholder modals - will implement next */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">Edit Store</h2>
-            <p className="text-gray-600 mb-4">Edit functionality coming in Phase 2!</p>
-            <Button onClick={() => setShowEditModal(false)}>Close</Button>
-          </div>
-        </div>
+      {/* Edit Store Modal */}
+      {store && (
+        <EditStoreModal
+          store={store}
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={loadStore}
+        />
       )}
 
-      {showImageUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">Upload Image</h2>
-            <p className="text-gray-600 mb-4">Image upload coming in Phase 3!</p>
-            <Button onClick={() => setShowImageUpload(false)}>Close</Button>
-          </div>
-        </div>
+      {/* Image Upload Modal */}
+      {store && (
+        <ImageUploadModal
+          storeId={store.id}
+          storeName={store.storeName}
+          isOpen={showImageUpload}
+          onClose={() => setShowImageUpload(false)}
+          onSuccess={loadStore}
+        />
       )}
 
-      {showProjectAssignment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">Assign to Project</h2>
-            <p className="text-gray-600 mb-4">Project assignment coming in Phase 4!</p>
-            <Button onClick={() => setShowProjectAssignment(false)}>Close</Button>
-          </div>
-        </div>
+      {/* Project Assignment Modal */}
+      {store && (
+        <ProjectAssignmentModal
+          store={store}
+          isOpen={showProjectAssignment}
+          onClose={() => setShowProjectAssignment(false)}
+          onSuccess={loadStore}
+        />
       )}
     </div>
   );
