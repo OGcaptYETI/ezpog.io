@@ -19,8 +19,8 @@ export function FieldTeamCard({ team, onEdit, onDelete, onClick, canEdit = false
       onClick={() => onClick?.(team)}
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
           <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
             team.type === 'internal' ? 'bg-blue-100' : 'bg-purple-100'
           }`}>
@@ -40,56 +40,59 @@ export function FieldTeamCard({ team, onEdit, onDelete, onClick, canEdit = false
           </div>
         </div>
 
-        {/* Menu */}
-        {canEdit && (onEdit || onDelete) && (
-          <div className="relative" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <MoreVertical className="w-5 h-5 text-gray-600" />
-            </button>
+        {/* Menu - Always reserve space */}
+        <div className="relative w-9 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => canEdit && setShowMenu(!showMenu)}
+            disabled={!canEdit}
+            className={`p-2 rounded-lg transition-colors ${
+              canEdit 
+                ? 'hover:bg-gray-100 cursor-pointer' 
+                : 'opacity-30 cursor-not-allowed'
+            }`}
+          >
+            <MoreVertical className="w-5 h-5 text-gray-600" />
+          </button>
 
-            {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowMenu(false)}
-                />
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border z-20">
-                  <div className="py-1">
-                    {onEdit && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(team);
-                          setShowMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit Team
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(team);
-                          setShowMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete Team
-                      </button>
-                    )}
+              {canEdit && showMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border z-20">
+                    <div className="py-1">
+                      {onEdit && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(team);
+                            setShowMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit Team
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(team);
+                            setShowMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete Team
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                </>
+              )}
+        </div>
       </div>
 
       {/* Description */}
