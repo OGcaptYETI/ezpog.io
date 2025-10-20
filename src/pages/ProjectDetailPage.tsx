@@ -136,13 +136,14 @@ export default function ProjectDetailPage() {
   };
 
   const loadAssignedTeams = async () => {
-    if (!project?.assignedTeams || project.assignedTeams.length === 0) return;
+    if (!project || !project.assignedTeams || project.assignedTeams.length === 0) return;
 
     setLoadingTeams(true);
     try {
+      const teamIds = project.assignedTeams.slice(0, 10); // Firestore 'in' query limit
       const teamsQuery = query(
         collection(db, 'fieldTeams'),
-        where(documentId(), 'in', project.assignedTeams.slice(0, 10)) // Firestore limit
+        where(documentId(), 'in', teamIds)
       );
       const teamsSnapshot = await getDocs(teamsQuery);
       const teamsData = teamsSnapshot.docs.map(doc => ({
@@ -155,6 +156,21 @@ export default function ProjectDetailPage() {
     } finally {
       setLoadingTeams(false);
     }
+  };
+
+  // Calculate total team member count (field team members + individual members)
+  const getTotalTeamMemberCount = (): number => {
+    let total = 0;
+    
+    // Count members from assigned field teams
+    assignedTeams.forEach(team => {
+      total += team.members?.length || 0;
+    });
+    
+    // Count individual team members
+    total += project?.teamMembers?.length || 0;
+    
+    return total;
   };
 
   const handleModalSave = async () => {
@@ -242,7 +258,7 @@ export default function ProjectDetailPage() {
             <div className="flex items-center justify-center mb-2">
               <UsersIcon className="w-6 h-6 text-indigo-600" />
             </div>
-            <div className="text-3xl font-bold text-gray-900">{project.teamMembers?.length || 0}</div>
+            <div className="text-3xl font-bold text-gray-900">{getTotalTeamMemberCount()}</div>
             <div className="text-sm text-gray-500">Team Members</div>
           </div>
           <div className="text-center">
