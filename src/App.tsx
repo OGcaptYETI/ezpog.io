@@ -19,7 +19,6 @@ import ProductsPage from './pages/ProductsPage';
 import InventoryPage from './pages/InventoryPage';
 import FieldTeamsPage from './pages/FieldTeamsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
-import TeamPage from './pages/TeamPage';
 import OrganizationSettingsPage from './pages/OrganizationSettingsPage';
 import PlanogramPrototype from './pages/PlanogramPrototype';
 import SuperAdminOrganizationsPage from './pages/superadmin/OrganizationsPage';
@@ -59,7 +58,6 @@ function App() {
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="field-teams" element={<FieldTeamsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="team" element={<TeamPage />} />
             <Route path="org-settings" element={<OrganizationSettingsPage />} />
           </Route>
           

@@ -38,7 +38,7 @@ export function Sidebar() {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   
-  const isAdmin = user?.role === 'admin';
+  const canAccessSettings = user?.role === 'admin' || user?.role === 'manager';
 
   return (
     <aside
@@ -48,7 +48,7 @@ export function Sidebar() {
       )}
     >
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href;
@@ -70,33 +70,21 @@ export function Sidebar() {
           );
         })}
         
-        {/* Admin-only sections */}
-        {isAdmin && (
+        {/* Settings - Admin and Manager Access */}
+        {canAccessSettings && (
           <>
             <div className="my-2 border-t border-gray-700" />
-            <Link
-              to="/dashboard/team"
-              className={cn(
-                'flex items-center gap-3 px-3 py-3 rounded-lg transition-colors',
-                location.pathname === '/dashboard/team'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              )}
-            >
-              <Users className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="font-medium">Team</span>}
-            </Link>
             <Link
               to="/dashboard/org-settings"
               className={cn(
                 'flex items-center gap-3 px-3 py-3 rounded-lg transition-colors',
-                location.pathname === '/dashboard/org-settings'
+                location.pathname.startsWith('/dashboard/org-settings')
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-300 hover:bg-gray-800 hover:text-white'
               )}
             >
               <Settings className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span className="font-medium">Organization Settings</span>}
+              {!collapsed && <span className="font-medium">Settings</span>}
             </Link>
           </>
         )}
