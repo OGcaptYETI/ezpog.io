@@ -7,6 +7,7 @@ import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { ProjectModal } from '@/components/projects/ProjectModal';
 import { ProjectCard } from '@/components/projects/ProjectCard';
+import { AssignTeamToProjectModal } from '@/components/projects/AssignTeamToProjectModal';
 
 type ViewMode = 'grid' | 'list';
 
@@ -27,6 +28,8 @@ export default function ProjectsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
+  const [showAssignTeamsModal, setShowAssignTeamsModal] = useState(false);
+  const [projectToAssign, setProjectToAssign] = useState<Project | null>(null);
 
   // Permission checks
   const canCreate = user?.role === 'admin' || user?.role === 'manager';
@@ -248,6 +251,10 @@ export default function ProjectsPage() {
               canDelete={canDelete}
               onEdit={handleEditProject}
               onDelete={handleDelete}
+              onAssignTeams={(project) => {
+                setProjectToAssign(project);
+                setShowAssignTeamsModal(true);
+              }}
               formatDate={formatDate}
               getStatusColor={getStatusColor}
               getPriorityColor={getPriorityColor}
@@ -264,6 +271,24 @@ export default function ProjectsPage() {
         project={selectedProject}
         mode={modalMode}
       />
+
+      {/* Assign Teams Modal */}
+      {projectToAssign && (
+        <AssignTeamToProjectModal
+          isOpen={showAssignTeamsModal}
+          onClose={() => {
+            setShowAssignTeamsModal(false);
+            setProjectToAssign(null);
+          }}
+          projectId={projectToAssign.id}
+          projectName={projectToAssign.name}
+          onSuccess={() => {
+            loadProjects();
+            setShowAssignTeamsModal(false);
+            setProjectToAssign(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Project } from '@/types';
-import { MoreVertical, Edit, Trash2, Lock, Calendar, Users, TrendingUp } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Lock, Calendar, Users, TrendingUp, UserPlus } from 'lucide-react';
 
 interface ProjectCardProps {
   project: Project;
@@ -10,6 +10,7 @@ interface ProjectCardProps {
   canDelete: boolean;
   onEdit: (project: Project) => void;
   onDelete: (projectId: string) => void;
+  onAssignTeams?: (project: Project) => void;
   formatDate: (date: any) => string;
   getStatusColor: (status: string) => string;
   getPriorityColor: (priority: string) => string;
@@ -22,6 +23,7 @@ export function ProjectCard({
   canDelete,
   onEdit,
   onDelete,
+  onAssignTeams,
   formatDate,
   getStatusColor,
   getPriorityColor,
@@ -61,10 +63,19 @@ export function ProjectCard({
               Edit (No Permission)
             </button>
           )}
+          {onAssignTeams && canEdit && (
+            <button
+              onClick={() => { onAssignTeams(project); setOpenMenu(false); }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 border-t"
+            >
+              <UserPlus className="w-4 h-4" />
+              Assign Teams
+            </button>
+          )}
           {canDelete ? (
             <button
               onClick={() => { onDelete(project.id); setOpenMenu(false); }}
-              className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-red-600"
+              className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-red-600 border-t"
             >
               <Trash2 className="w-4 h-4" />
               Delete
@@ -72,7 +83,7 @@ export function ProjectCard({
           ) : (
             <button
               disabled
-              className="w-full px-4 py-2 text-left text-gray-400 flex items-center gap-2 cursor-not-allowed"
+              className="w-full px-4 py-2 text-left text-gray-400 flex items-center gap-2 cursor-not-allowed border-t"
             >
               <Lock className="w-4 h-4" />
               Delete (No Permission)
