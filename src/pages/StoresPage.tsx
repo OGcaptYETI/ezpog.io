@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/features/auth';
 import { getStoresByOrganization, bulkDeleteStores, deleteAllStoresForOrganization, type Store } from '@/services/firestore/stores';
-import { Building2, Plus, Search, Upload, MapPin, Phone, User, Filter, ArrowUpDown, ArrowUp, ArrowDown, Trash2, AlertTriangle } from 'lucide-react';
+import { Building2, Plus, Search, Upload, MapPin, Phone, User, Filter, ArrowUpDown, ArrowUp, ArrowDown, Trash2, AlertTriangle, ChevronRight, ChevronDown, Mail, FileText } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
@@ -34,6 +34,9 @@ export default function StoresPage() {
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showDeleteSelectedModal, setShowDeleteSelectedModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Expandable rows state
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // RBAC permissions
   const canCreate = user?.role === 'admin' || user?.role === 'manager';
@@ -112,6 +115,19 @@ export default function StoresPage() {
     } finally {
       setDeleting(false);
     }
+  };
+
+  // Toggle row expansion
+  const handleToggleExpand = (storeId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(storeId)) {
+        newSet.delete(storeId);
+      } else {
+        newSet.add(storeId);
+      }
+      return newSet;
+    });
   };
 
   // Get unique values for filter dropdowns
@@ -461,10 +477,10 @@ export default function StoresPage() {
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
-              <tr>
+              <tr className="text-xs">
                 {/* Select All Checkbox - Admin Only */}
                 {canDelete && (
-                  <th className="px-6 py-3">
+                  <th className="px-3 py-2 w-10">
                     <input
                       type="checkbox"
                       checked={filteredStores.length > 0 && selectedStores.size === filteredStores.length}
@@ -474,148 +490,254 @@ export default function StoresPage() {
                   </th>
                 )}
 
-                {/* Sortable Store Column */}
+                {/* Expand Column */}
+                <th className="px-2 py-2 w-10"></th>
+
+                {/* Store Name - Sortable */}
                 <th 
                   onClick={() => handleSort('storeName')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-3 py-2 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none"
                 >
-                  <div className="flex items-center gap-2">
-                    Store
+                  <div className="flex items-center gap-1">
+                    Store Name
                     {sortField === 'storeName' && (
-                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
                     )}
-                    {sortField !== 'storeName' && <ArrowUpDown className="w-4 h-4 text-gray-300" />}
                   </div>
                 </th>
 
-                {/* Sortable Location Column */}
+                {/* City - Sortable */}
                 <th 
                   onClick={() => handleSort('city')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-3 py-2 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none"
                 >
-                  <div className="flex items-center gap-2">
-                    Location
+                  <div className="flex items-center gap-1">
+                    City
                     {sortField === 'city' && (
-                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
                     )}
-                    {sortField !== 'city' && <ArrowUpDown className="w-4 h-4 text-gray-300" />}
                   </div>
                 </th>
 
-                {/* Sortable Region Column */}
+                {/* State - Sortable */}
+                <th 
+                  onClick={() => handleSort('state')}
+                  className="px-3 py-2 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none"
+                >
+                  <div className="flex items-center gap-1">
+                    State
+                    {sortField === 'state' && (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                    )}
+                  </div>
+                </th>
+
+                {/* Region - Sortable */}
                 <th 
                   onClick={() => handleSort('region')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-3 py-2 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 select-none"
                 >
-                  <div className="flex items-center gap-2">
-                    Region / District
+                  <div className="flex items-center gap-1">
+                    Region
                     {sortField === 'region' && (
-                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
                     )}
-                    {sortField !== 'region' && <ArrowUpDown className="w-4 h-4 text-gray-300" />}
                   </div>
                 </th>
 
-                {/* Sortable Format Column */}
-                <th 
-                  onClick={() => handleSort('storeFormat')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                >
-                  <div className="flex items-center gap-2">
-                    Format
-                    {sortField === 'storeFormat' && (
-                      sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
-                    )}
-                    {sortField !== 'storeFormat' && <ArrowUpDown className="w-4 h-4 text-gray-300" />}
-                  </div>
+                {/* Phone */}
+                <th className="px-3 py-2 text-left font-medium text-gray-600">
+                  Phone
                 </th>
 
-                {/* Non-sortable Manager Column */}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Manager
-                </th>
-
-                {/* Non-sortable Status Column */}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                {/* Actions */}
+                <th className="px-3 py-2 text-center font-medium text-gray-600 w-20">
+                  Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStores.map((store) => (
-                <tr key={store.id} className="hover:bg-gray-50">
-                  {/* Checkbox Cell - Admin Only */}
-                  {canDelete && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedStores.has(store.id)}
-                        onChange={() => handleToggleSelect(store.id)}
-                        className="w-4 h-4 text-indigo-600 rounded"
-                      />
-                    </td>
-                  )}
+              {filteredStores.map((store) => {
+                const isExpanded = expandedRows.has(store.id);
+                return (
+                  <>
+                    {/* Main Compact Row */}
+                    <tr key={store.id} className="hover:bg-gray-50 text-sm">
+                      {/* Checkbox - Admin Only */}
+                      {canDelete && (
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedStores.has(store.id)}
+                            onChange={() => handleToggleSelect(store.id)}
+                            className="w-4 h-4 text-indigo-600 rounded"
+                          />
+                        </td>
+                      )}
 
-                  {/* Store Info Cell */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Building2 className="w-5 h-5 text-gray-400 mr-3" />
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{store.storeName}</div>
-                        <div className="text-xs text-gray-500">
-                          {store.storeNumber && <span className="font-mono">#{store.storeNumber} • </span>}
-                          <span className="font-mono">{store.storeId}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <MapPin className="w-4 h-4 text-gray-400 mr-2" />
-                      <div>
-                        <div>{store.city}, {store.state}</div>
-                        <div className="text-xs text-gray-500">{store.zipCode}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{store.region || '—'}</div>
-                    <div className="text-xs text-gray-500">{store.district || '—'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">
-                      {store.storeFormat}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {store.storeManagerName ? (
-                      <div className="flex items-center text-sm text-gray-900">
-                        <User className="w-4 h-4 text-gray-400 mr-2" />
-                        <div>
-                          <div>{store.storeManagerName}</div>
-                          {store.storePhone && (
-                            <div className="text-xs text-gray-500 flex items-center">
-                              <Phone className="w-3 h-3 mr-1" />
-                              {store.storePhone}
-                            </div>
+                      {/* Expand Arrow */}
+                      <td className="px-2 py-2">
+                        <button
+                          onClick={() => handleToggleExpand(store.id)}
+                          className="text-gray-400 hover:text-gray-600 transition-transform"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
                           )}
+                        </button>
+                      </td>
+
+                      {/* Store Name - Clickable */}
+                      <td className="px-3 py-2">
+                        <button
+                          onClick={() => window.location.href = `/stores/${store.id}`}
+                          className="text-left hover:text-indigo-600 font-medium transition-colors"
+                        >
+                          {store.storeName}
+                        </button>
+                      </td>
+
+                      {/* City */}
+                      <td className="px-3 py-2 text-gray-700">
+                        {store.city}
+                      </td>
+
+                      {/* State */}
+                      <td className="px-3 py-2 text-gray-700">
+                        {store.state}
+                      </td>
+
+                      {/* Region */}
+                      <td className="px-3 py-2 text-gray-700">
+                        {store.region || '—'}
+                      </td>
+
+                      {/* Phone */}
+                      <td className="px-3 py-2 text-gray-700">
+                        {store.storePhone || '—'}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-3 py-2">
+                        <div className="flex items-center justify-center gap-2">
+                          {store.storeManagerEmail && (
+                            <a
+                              href={`mailto:${store.storeManagerEmail}`}
+                              className="text-gray-400 hover:text-indigo-600 transition-colors"
+                              title="Email Store"
+                            >
+                              <Mail className="w-4 h-4" />
+                            </a>
+                          )}
+                          <button
+                            onClick={() => showToast('POG/Schematic viewer coming soon!', 'info')}
+                            className="text-gray-400 hover:text-indigo-600 transition-colors"
+                            title="View Schematic"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
                         </div>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-400">—</span>
+                      </td>
+                    </tr>
+
+                    {/* Expandable Detail Row */}
+                    {isExpanded && (
+                      <tr key={`${store.id}-expanded`} className="bg-gray-50">
+                        <td colSpan={canDelete ? 8 : 7} className="px-6 py-4">
+                          <div className="grid grid-cols-3 gap-6">
+                            {/* Fixture Thumbnail */}
+                            <div className="col-span-1">
+                              <h4 className="text-xs font-semibold text-gray-700 mb-2">Store Image</h4>
+                              <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center">
+                                <Building2 className="w-12 h-12 text-gray-300" />
+                                <span className="text-xs text-gray-400 ml-2">No image</span>
+                              </div>
+                            </div>
+
+                            {/* Store Details */}
+                            <div className="col-span-1">
+                              <h4 className="text-xs font-semibold text-gray-700 mb-2">Store Details</h4>
+                              <dl className="space-y-1 text-xs">
+                                <div className="flex justify-between">
+                                  <dt className="text-gray-500">Store ID:</dt>
+                                  <dd className="text-gray-900 font-mono">{store.storeId}</dd>
+                                </div>
+                                {store.storeNumber && (
+                                  <div className="flex justify-between">
+                                    <dt className="text-gray-500">Store Number:</dt>
+                                    <dd className="text-gray-900 font-mono">#{store.storeNumber}</dd>
+                                  </div>
+                                )}
+                                <div className="flex justify-between">
+                                  <dt className="text-gray-500">Format:</dt>
+                                  <dd className="text-gray-900">{store.storeFormat}</dd>
+                                </div>
+                                <div className="flex justify-between">
+                                  <dt className="text-gray-500">Status:</dt>
+                                  <dd>
+                                    <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                      store.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {store.isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                  </dd>
+                                </div>
+                                {store.squareFootage && (
+                                  <div className="flex justify-between">
+                                    <dt className="text-gray-500">Square Footage:</dt>
+                                    <dd className="text-gray-900">{store.squareFootage.toLocaleString()} sq ft</dd>
+                                  </div>
+                                )}
+                              </dl>
+                            </div>
+
+                            {/* Contact & Location */}
+                            <div className="col-span-1">
+                              <h4 className="text-xs font-semibold text-gray-700 mb-2">Contact & Location</h4>
+                              <dl className="space-y-1 text-xs">
+                                <div>
+                                  <dt className="text-gray-500">Address:</dt>
+                                  <dd className="text-gray-900">{store.address}</dd>
+                                  <dd className="text-gray-900">{store.city}, {store.state} {store.zipCode}</dd>
+                                </div>
+                                {store.storeManagerName && (
+                                  <div className="mt-2">
+                                    <dt className="text-gray-500">Manager:</dt>
+                                    <dd className="text-gray-900">{store.storeManagerName}</dd>
+                                  </div>
+                                )}
+                                {store.storeManagerEmail && (
+                                  <div>
+                                    <dt className="text-gray-500">Email:</dt>
+                                    <dd className="text-gray-900">{store.storeManagerEmail}</dd>
+                                  </div>
+                                )}
+                                {store.district && (
+                                  <div className="mt-2">
+                                    <dt className="text-gray-500">District:</dt>
+                                    <dd className="text-gray-900">{store.district}</dd>
+                                  </div>
+                                )}
+                              </dl>
+                              <div className="mt-3">
+                                <Button
+                                  onClick={() => window.location.href = `/stores/${store.id}`}
+                                  variant="outline"
+                                  className="w-full text-xs"
+                                >
+                                  View Full Details
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      store.isActive
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {store.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         </div>
