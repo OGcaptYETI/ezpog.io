@@ -58,15 +58,15 @@ export default function FieldTeamsPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-6 lg:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Users className="w-8 h-8 text-blue-600" />
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <Users className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
             Field Teams
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             Organize users into teams for store management and resets
           </p>
         </div>
@@ -74,7 +74,7 @@ export default function FieldTeamsPage() {
         {canEdit && (
           <Button
             onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
           >
             <Plus className="w-4 h-4 mr-2" />
             Create Team
@@ -83,26 +83,26 @@ export default function FieldTeamsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl border p-6">
-          <p className="text-sm text-gray-600 mb-1">Total Teams</p>
-          <p className="text-3xl font-bold text-gray-900">{teams.length}</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+        <div className="bg-white rounded-lg border p-3 md:p-4">
+          <p className="text-xs text-gray-600 mb-0.5">Total Teams</p>
+          <p className="text-2xl md:text-3xl font-bold text-gray-900">{teams.length}</p>
         </div>
-        <div className="bg-white rounded-xl border p-6">
-          <p className="text-sm text-gray-600 mb-1">Internal Teams</p>
-          <p className="text-3xl font-bold text-blue-600">
+        <div className="bg-white rounded-lg border p-3 md:p-4">
+          <p className="text-xs text-gray-600 mb-0.5">Internal Teams</p>
+          <p className="text-2xl md:text-3xl font-bold text-blue-600">
             {teams.filter(t => t.type === 'internal').length}
           </p>
         </div>
-        <div className="bg-white rounded-xl border p-6">
-          <p className="text-sm text-gray-600 mb-1">Contractor Teams</p>
-          <p className="text-3xl font-bold text-purple-600">
+        <div className="bg-white rounded-lg border p-3 md:p-4">
+          <p className="text-xs text-gray-600 mb-0.5">Contractor Teams</p>
+          <p className="text-2xl md:text-3xl font-bold text-purple-600">
             {teams.filter(t => t.type === 'contractor').length}
           </p>
         </div>
-        <div className="bg-white rounded-xl border p-6">
-          <p className="text-sm text-gray-600 mb-1">Total Members</p>
-          <p className="text-3xl font-bold text-green-600">
+        <div className="bg-white rounded-lg border p-3 md:p-4">
+          <p className="text-xs text-gray-600 mb-0.5">Total Members</p>
+          <p className="text-2xl md:text-3xl font-bold text-green-600">
             {teams.reduce((acc, team) => acc + team.members.length, 0)}
           </p>
         </div>
@@ -114,10 +114,10 @@ export default function FieldTeamsPage() {
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
         </div>
       ) : teams.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Field Teams Yet</h3>
-          <p className="text-gray-600 mb-4">
+        <div className="bg-white rounded-lg shadow p-8 md:p-12 text-center">
+          <Users className="w-12 h-12 md:w-16 md:h-16 mx-auto text-gray-300 mb-4" />
+          <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">No Field Teams Yet</h3>
+          <p className="text-sm md:text-base text-gray-600 mb-4">
             Create your first field team to organize users for store assignments
           </p>
           {canEdit && (
@@ -131,15 +131,15 @@ export default function FieldTeamsPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
           {teams.map(team => (
             <FieldTeamCard
               key={team.id}
               team={team}
               canEdit={canEdit}
-              onEdit={(team) => showToast('Edit functionality coming in Phase 4!', 'info')}
-              onDelete={(team) => setTeamToDelete(team)}
-              onClick={(team) => showToast(`Team detail view coming in Phase 4! Team: ${team.name}`, 'info')}
+              onEdit={() => showToast('Edit functionality coming in Phase 6!', 'info')}
+              onDelete={() => setTeamToDelete(team)}
+              onClick={() => showToast(`Team detail view coming in Phase 6! Team: ${team.name}`, 'info')}
             />
           ))}
         </div>
