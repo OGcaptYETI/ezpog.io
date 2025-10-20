@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Plus, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
@@ -10,6 +11,7 @@ import { EditFieldTeamModal } from '@/features/admin/field-teams/components/Edit
 import type { FieldTeam } from '@/types/fieldTeams';
 
 export default function FieldTeamsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
   
@@ -145,7 +147,7 @@ export default function FieldTeamsPage() {
                 setShowEditModal(true);
               }}
               onDelete={() => setTeamToDelete(team)}
-              onClick={() => showToast(`Team detail view coming in Phase 6! Team: ${team.name}`, 'info')}
+              onClick={() => navigate(`/dashboard/field-teams/${team.id}`)}
             />
           ))}
         </div>
