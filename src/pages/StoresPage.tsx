@@ -6,6 +6,8 @@ import { Building2, Plus, Search, Upload, MapPin, Filter, ArrowUp, ArrowDown, Tr
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
+import { AssignToFieldTeamModal } from '@/components/stores/AssignToFieldTeamModal';
+import { AssignToUserModal } from '@/components/stores/AssignToUserModal';
 
 type SortField = 'storeName' | 'storeId' | 'city' | 'state' | 'region' | 'storeFormat';
 type SortDirection = 'asc' | 'desc';
@@ -37,6 +39,10 @@ export default function StoresPage() {
   const [showDeleteSelectedModal, setShowDeleteSelectedModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showAssignmentMenu, setShowAssignmentMenu] = useState(false);
+  
+  // Assignment modals state
+  const [showFieldTeamModal, setShowFieldTeamModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   
   // Expandable rows state
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -290,7 +296,7 @@ export default function StoresPage() {
                     <div className="py-1">
                       <button
                         onClick={() => {
-                          showToast('Project assignment modal coming in Phase 2!', 'info');
+                          showToast('Project assignment coming soon!', 'info');
                           setShowAssignmentMenu(false);
                         }}
                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3"
@@ -303,7 +309,7 @@ export default function StoresPage() {
                       </button>
                       <button
                         onClick={() => {
-                          showToast('Field team assignment modal coming in Phase 2!', 'info');
+                          setShowFieldTeamModal(true);
                           setShowAssignmentMenu(false);
                         }}
                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3 border-t"
@@ -316,7 +322,7 @@ export default function StoresPage() {
                       </button>
                       <button
                         onClick={() => {
-                          showToast('User assignment modal coming in Phase 2!', 'info');
+                          setShowUserModal(true);
                           setShowAssignmentMenu(false);
                         }}
                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3 border-t"
@@ -840,6 +846,28 @@ export default function StoresPage() {
         onSuccess={() => {
           loadStores();
           setIsImportModalOpen(false);
+        }}
+      />
+
+      {/* Assign to Field Team Modal */}
+      <AssignToFieldTeamModal
+        isOpen={showFieldTeamModal}
+        onClose={() => setShowFieldTeamModal(false)}
+        selectedStoreIds={Array.from(selectedStores)}
+        onSuccess={() => {
+          loadStores();
+          setSelectedStores(new Set());
+        }}
+      />
+
+      {/* Assign to User Modal */}
+      <AssignToUserModal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        selectedStoreIds={Array.from(selectedStores)}
+        onSuccess={() => {
+          loadStores();
+          setSelectedStores(new Set());
         }}
       />
 
