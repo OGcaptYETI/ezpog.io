@@ -93,16 +93,23 @@ export function AssignToProjectModal({
 
     setSaving(true);
     try {
+      console.log('🔄 Assigning stores to projects...');
+      console.log('Store IDs:', selectedStoreIds);
+      console.log('Project IDs:', Array.from(selectedProjects));
+      
       // Update each project with the assigned stores
       const projectIds = Array.from(selectedProjects);
       await Promise.all(
-        projectIds.map(projectId => 
-          updateDoc(doc(db, 'projects', projectId), {
+        projectIds.map(async (projectId) => {
+          console.log(`Updating project ${projectId} with ${selectedStoreIds.length} stores`);
+          await updateDoc(doc(db, 'projects', projectId), {
             assignedStores: arrayUnion(...selectedStoreIds)
-          })
-        )
+          });
+          console.log(`✅ Successfully updated project ${projectId}`);
+        })
       );
 
+      console.log('✅ All projects updated successfully');
       showToast(
         `Successfully assigned ${selectedStoreIds.length} store(s) to ${selectedProjects.size} project(s)!`,
         'success'
@@ -110,7 +117,7 @@ export function AssignToProjectModal({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error assigning stores to projects:', error);
+      console.error('❌ Error assigning stores to projects:', error);
       showToast('Failed to assign stores to projects', 'error');
     } finally {
       setSaving(false);

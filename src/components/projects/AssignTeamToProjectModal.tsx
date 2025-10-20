@@ -79,20 +79,25 @@ export function AssignTeamToProjectModal({
 
     setSaving(true);
     try {
-      // Update project with assigned teams
+      console.log('🔄 Assigning teams to project...');
+      console.log('Project ID:', projectId);
+      console.log('Project Name:', projectName);
+      console.log('Team IDs:', Array.from(selectedTeams));
+      
+      const teamIds = Array.from(selectedTeams);
       await updateDoc(doc(db, 'projects', projectId), {
-        assignedTeams: arrayUnion(...Array.from(selectedTeams))
+        assignedTeams: arrayUnion(...teamIds)
       });
 
+      console.log('✅ Successfully assigned teams to project');
       showToast(
         `Successfully assigned ${selectedTeams.size} team(s) to ${projectName}!`,
         'success'
       );
       onSuccess();
-      onClose();
     } catch (error) {
-      console.error('Error assigning teams:', error);
-      showToast('Failed to assign teams', 'error');
+      console.error('❌ Error assigning teams to project:', error);
+      showToast('Failed to assign teams to project', 'error');
     } finally {
       setSaving(false);
     }
