@@ -41,8 +41,7 @@ export function TeamTab({ formData, updateFormData }: TeamTabProps) {
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-800">
-          <strong>Note:</strong> In Phase 2, you'll be able to search and select existing users from your organization.
-          For now, you can manually add team member information.
+          <strong>Note:</strong> This section is for adding individual project coordinators or managers. To assign entire field teams with all their members, use the "Assign Teams" button from the project card menu or project detail page.
         </p>
       </div>
 
