@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/services/firebase/config';
 import { type Store } from '@/services/firestore/stores';
 import { 
   Building2, ArrowLeft, MapPin, Phone, Mail, User, Edit, Calendar, 
   CheckCircle, XCircle, Camera, Briefcase, History, Package, Settings, 
-  Image as ImageIcon, Info
+  Image as ImageIcon, Info, Star, X as XIcon, Trash2
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
@@ -28,6 +28,8 @@ export default function StoreDetailPage() {
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [showProjectAssignment, setShowProjectAssignment] = useState(false);
   const [showResetHistory, setShowResetHistory] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [settingFeatured, setSettingFeatured] = useState(false);
 
   // RBAC
   const canEdit = user?.role === 'admin' || user?.role === 'manager';
@@ -59,6 +61,49 @@ export default function StoreDetailPage() {
       showToast('Failed to load store details', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSetFeaturedImage = async (imageUrl: string) => {
+    if (!store) return;
+    
+    setSettingFeatured(true);
+    try {
+      const storeRef = doc(db, 'stores', store.id);
+      await updateDoc(storeRef, {
+        featuredImage: imageUrl,
+        updatedAt: Timestamp.now(),
+      });
+      
+      showToast('Featured image updated', 'success');
+      await loadStore(); // Refresh to show star on featured image
+    } catch (error) {
+      console.error('Error setting featured image:', error);
+      showToast('Failed to set featured image', 'error');
+    } finally {
+      setSettingFeatured(false);
+    }
+  };
+
+  const handleDeleteImage = async (imageUrl: string) => {
+    if (!store || !(store as any).images) return;
+    
+    try {
+      const updatedImages = (store as any).images.filter((img: any) => img.url !== imageUrl);
+      const storeRef = doc(db, 'stores', store.id);
+      
+      await updateDoc(storeRef, {
+        images: updatedImages,
+        // If deleting the featured image, clear it
+        ...(((store as any).featuredImage === imageUrl) && { featuredImage: null }),
+        updatedAt: Timestamp.now(),
+      });
+      
+      showToast('Image deleted', 'success');
+      await loadStore();
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      showToast('Failed to delete image', 'error');
     }
   };
 
@@ -152,39 +197,121 @@ export default function StoreDetailPage() {
           title="Store Images & Media" 
           icon={<Camera className="w-5 h-5" />}
           defaultOpen={true}
-          badge={0}
+          badge={(store as any).images?.length || 0}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg h-64 flex items-center justify-center hover:border-indigo-400 transition-colors">
-              <div className="text-center">
-                <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 mb-3">No images uploaded</p>
-                {canEdit && (
-                  <Button
-                    onClick={() => setShowImageUpload(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700"
-                  >
-                    <Camera className="w-4 h-4 mr-2" />
-                    Upload Image
-                  </Button>
-                )}
-              </div>
-            </div>
+          {(store as any).images && (store as any).images.length > 0 ? (
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                  <Info className="w-4 h-4" />
-                  Image Guidelines
-                </h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Recommended size: 1920x1080px</li>
-                  <li>• Supported formats: JPG, PNG, WebP</li>
-                  <li>• Max file size: 5MB</li>
-                  <li>• Include store exterior and interior shots</li>
-                </ul>
+              {/* Image Gallery */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {(store as any).images.map((image: any, index: number) => {
+                  const isFeatured = (store as any).featuredImage === image.url;
+                  return (
+                    <div key={image.url || index} className="group relative aspect-square">
+                      {/* Image */}
+                      <div 
+                        className="w-full h-full rounded-lg overflow-hidden border-2 transition-all cursor-pointer hover:shadow-lg"
+                        style={{ borderColor: isFeatured ? '#4f46e5' : '#e5e7eb' }}
+                        onClick={() => setSelectedImage(image.url)}
+                      >
+                        <img
+                          src={image.url}
+                          alt={image.filename || `Store image ${index + 1}`}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      </div>
+                      
+                      {/* Featured Star Badge */}
+                      {isFeatured && (
+                        <div className="absolute top-2 left-2 bg-indigo-600 text-white rounded-full p-1.5 shadow-lg">
+                          <Star className="w-4 h-4 fill-current" />
+                        </div>
+                      )}
+                      
+                      {/* Action Buttons - Show on Hover */}
+                      {canEdit && (
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {!isFeatured && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSetFeaturedImage(image.url);
+                              }}
+                              disabled={settingFeatured}
+                              className="bg-white text-gray-700 hover:bg-indigo-600 hover:text-white p-1.5 rounded-full shadow-lg transition-colors disabled:opacity-50"
+                              title="Set as featured"
+                            >
+                              <Star className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Delete this image?')) {
+                                handleDeleteImage(image.url);
+                              }
+                            }}
+                            className="bg-white text-red-600 hover:bg-red-600 hover:text-white p-1.5 rounded-full shadow-lg transition-colors"
+                            title="Delete image"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Image Info */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-white text-xs truncate">{image.filename}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Upload Button */}
+              {canEdit && (
+                <Button
+                  onClick={() => setShowImageUpload(true)}
+                  variant="outline"
+                  className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Upload More Images
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg h-64 flex items-center justify-center hover:border-indigo-400 transition-colors">
+                <div className="text-center">
+                  <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 mb-3">No images uploaded</p>
+                  {canEdit && (
+                    <Button
+                      onClick={() => setShowImageUpload(true)}
+                      className="bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Upload Images
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    Image Guidelines
+                  </h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Recommended size: 1920x1080px</li>
+                    <li>• Supported formats: JPG, PNG, WebP</li>
+                    <li>• Max file size: 5MB</li>
+                    <li>• Include store exterior and interior shots</li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </AccordionItem>
 
         {/* Store Information */}
@@ -511,6 +638,27 @@ export default function StoreDetailPage() {
           onClose={() => setShowResetHistory(false)}
           onSuccess={loadStore}
         />
+      )}
+
+      {/* Image Lightbox Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+          >
+            <XIcon className="w-8 h-8" />
+          </button>
+          <img
+            src={selectedImage}
+            alt="Store image"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
     </div>
   );
