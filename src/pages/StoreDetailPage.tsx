@@ -15,6 +15,7 @@ import { Accordion, AccordionItem } from '@/components/ui/Accordion';
 import { EditStoreModal } from '@/components/stores/EditStoreModal';
 import { ImageUploadModal } from '@/components/stores/ImageUploadModal';
 import { ProjectAssignmentModal } from '@/components/stores/ProjectAssignmentModal';
+import { ResetHistoryModal, type ResetRecord } from '@/components/stores/ResetHistoryModal';
 
 export default function StoreDetailPage() {
   const { storeId } = useParams<{ storeId: string }>();
@@ -26,6 +27,7 @@ export default function StoreDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [showProjectAssignment, setShowProjectAssignment] = useState(false);
+  const [showResetHistory, setShowResetHistory] = useState(false);
 
   // RBAC
   const canEdit = user?.role === 'admin' || user?.role === 'manager';
@@ -324,22 +326,91 @@ export default function StoreDetailPage() {
         <AccordionItem 
           title="Reset & Remodel History" 
           icon={<History className="w-5 h-5" />}
-          badge={0}
+          badge={(store as any).resetHistory?.length || 0}
         >
-          <div className="text-center py-8">
-            <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 mb-4">No reset history yet</p>
-            {canEdit && (
-              <Button
-                onClick={() => showToast('Reset tracking coming soon!', 'info')}
-                variant="outline"
-                className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-              >
-                <History className="w-4 h-4 mr-2" />
-                Add Reset Record
-              </Button>
-            )}
-          </div>
+          {(store as any).resetHistory && (store as any).resetHistory.length > 0 ? (
+            <div className="space-y-4">
+              {(store as any).resetHistory.map((reset: ResetRecord, index: number) => (
+                <div key={reset.id || index} className="bg-white border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-1">{reset.title}</h4>
+                      <p className="text-sm text-gray-600">{reset.description}</p>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ml-4 ${
+                      reset.status === 'completed' ? 'bg-green-100 text-green-700' :
+                      reset.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
+                      reset.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                      reset.status === 'delayed' ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {reset.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-gray-600 mb-3">
+                    <div>
+                      <span className="font-medium">Type:</span> {reset.type.replace('_', ' ')}
+                    </div>
+                    <div>
+                      <span className="font-medium">Scheduled:</span> {reset.scheduledDate?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                    </div>
+                    {reset.startDate && (
+                      <div>
+                        <span className="font-medium">Started:</span> {reset.startDate.toDate().toLocaleDateString()}
+                      </div>
+                    )}
+                    {reset.completedDate && (
+                      <div>
+                        <span className="font-medium">Completed:</span> {reset.completedDate.toDate().toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                  {reset.notes && (
+                    <div className="text-xs text-gray-600 bg-gray-50 rounded p-2 mt-2">
+                      <span className="font-medium">Notes:</span> {reset.notes}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>Before: {reset.beforePhotos?.length || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>After: {reset.afterPhotos?.length || 0}</span>
+                    </div>
+                    <div className="ml-auto">
+                      Created by {reset.createdByName}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {canEdit && (
+                <Button
+                  onClick={() => setShowResetHistory(true)}
+                  variant="outline"
+                  className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  Add Another Reset Record
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 mb-4">No reset history yet</p>
+              {canEdit && (
+                <Button
+                  onClick={() => setShowResetHistory(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  Add Reset Record
+                </Button>
+              )}
+            </div>
+          )}
         </AccordionItem>
 
         {/* Custom Fields */}
@@ -427,6 +498,17 @@ export default function StoreDetailPage() {
           store={store}
           isOpen={showProjectAssignment}
           onClose={() => setShowProjectAssignment(false)}
+          onSuccess={loadStore}
+        />
+      )}
+
+      {/* Reset History Modal */}
+      {store && (
+        <ResetHistoryModal
+          storeId={store.id}
+          storeName={store.storeName}
+          isOpen={showResetHistory}
+          onClose={() => setShowResetHistory(false)}
           onSuccess={loadStore}
         />
       )}
