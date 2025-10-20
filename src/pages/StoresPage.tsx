@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { getStoresByOrganization, bulkDeleteStores, deleteAllStoresForOrganization, type Store } from '@/services/firestore/stores';
-import { Building2, Plus, Search, Upload, MapPin, Filter, ArrowUp, ArrowDown, Trash2, AlertTriangle, ChevronRight, ChevronDown, Mail, FileText } from 'lucide-react';
+import { Building2, Plus, Search, Upload, MapPin, Filter, ArrowUp, ArrowDown, Trash2, AlertTriangle, ChevronRight, ChevronDown, Mail, FileText, Briefcase, Users } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
@@ -36,13 +36,15 @@ export default function StoresPage() {
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showDeleteSelectedModal, setShowDeleteSelectedModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showAssignmentMenu, setShowAssignmentMenu] = useState(false);
   
   // Expandable rows state
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // RBAC permissions
   const canCreate = user?.role === 'admin' || user?.role === 'manager';
-  const canDelete = user?.role === 'admin'; // Only admins can delete stores
+  const canSelect = user?.role === 'admin' || user?.role === 'manager'; // Admins and managers can select stores
+  const canDelete = user?.role === 'admin'; // Only admins can delete stores (backend only, no UI)
 
   useEffect(() => {
     loadStores();
@@ -237,20 +239,12 @@ export default function StoresPage() {
           </div>
           {canCreate && (
             <div className="flex gap-3">
-              {canDelete && stores.length > 0 && (
-                <Button 
-                  onClick={() => setShowDeleteAllModal(true)} 
-                  variant="outline"
-                  className="border-red-300 text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete All Stores
+              {user?.role === 'admin' && (
+                <Button onClick={() => setIsImportModalOpen(true)} variant="outline">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import CSV
                 </Button>
               )}
-              <Button onClick={() => setIsImportModalOpen(true)} variant="outline">
-                <Upload className="w-4 h-4 mr-2" />
-                Import CSV
-              </Button>
               <Button onClick={() => showToast('Store creation modal coming in Phase 2B!', 'info')}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Store
@@ -260,8 +254,8 @@ export default function StoresPage() {
         </div>
       </div>
 
-      {/* Bulk Actions Toolbar - Only visible to admins */}
-      {canDelete && selectedStores.size > 0 && (
+      {/* Bulk Actions Toolbar - Managers and Admins */}
+      {canSelect && selectedStores.size > 0 && (
         <div className="mb-6 bg-indigo-50 border-2 border-indigo-300 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -275,14 +269,69 @@ export default function StoresPage() {
                 Clear selection
               </button>
             </div>
-            <Button
-              onClick={() => setShowDeleteSelectedModal(true)}
-              variant="outline"
-              className="border-red-300 text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Selected ({selectedStores.size})
-            </Button>
+            
+            {/* Assignment Dropdown */}
+            <div className="relative">
+              <Button
+                onClick={() => setShowAssignmentMenu(!showAssignmentMenu)}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                Assign to...
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+              
+              {showAssignmentMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowAssignmentMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border z-20">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          showToast('Project assignment modal coming in Phase 2!', 'info');
+                          setShowAssignmentMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3"
+                      >
+                        <Briefcase className="w-4 h-4 text-indigo-600" />
+                        <div>
+                          <div className="font-medium">Assign to Project</div>
+                          <div className="text-xs text-gray-500">Link stores to a project</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          showToast('Field team assignment modal coming in Phase 2!', 'info');
+                          setShowAssignmentMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3 border-t"
+                      >
+                        <Users className="w-4 h-4 text-blue-600" />
+                        <div>
+                          <div className="font-medium">Assign to Field Team</div>
+                          <div className="text-xs text-gray-500">Assign to a team cluster</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          showToast('User assignment modal coming in Phase 2!', 'info');
+                          setShowAssignmentMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-3 border-t"
+                      >
+                        <Users className="w-4 h-4 text-green-600" />
+                        <div>
+                          <div className="font-medium">Assign to User</div>
+                          <div className="text-xs text-gray-500">Add to user's territory</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -480,8 +529,8 @@ export default function StoresPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr className="text-xs">
-                {/* Select All Checkbox - Admin Only */}
-                {canDelete && (
+                {/* Select All Checkbox - Managers and Admins */}
+                {canSelect && (
                   <th className="px-3 py-2 w-10">
                     <input
                       type="checkbox"
@@ -565,8 +614,8 @@ export default function StoresPage() {
                   <React.Fragment key={store.id}>
                     {/* Main Compact Row */}
                     <tr className="hover:bg-gray-50 text-sm">
-                      {/* Checkbox - Admin Only */}
-                      {canDelete && (
+                      {/* Checkbox - Managers and Admins */}
+                      {canSelect && (
                         <td className="px-3 py-2">
                           <input
                             type="checkbox"
@@ -647,7 +696,7 @@ export default function StoresPage() {
                     {/* Expandable Detail Row */}
                     {isExpanded && (
                       <tr key={`${store.id}-expanded`} className="bg-gradient-to-r from-indigo-50 to-blue-50">
-                        <td colSpan={canDelete ? 8 : 7} className="px-8 py-6">
+                        <td colSpan={canSelect ? 8 : 7} className="px-8 py-6">
                           <div className="flex gap-6">
                             {/* Store Image - Compact */}
                             <div className="flex-shrink-0">
