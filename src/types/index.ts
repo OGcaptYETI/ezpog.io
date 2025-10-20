@@ -162,12 +162,14 @@ export interface Project {
   
   // Store Management
   stores: ProjectStore[];
+  assignedStores?: string[];     // Store document IDs (quick lookup)
   totalStores: number;
   completedStores: number;
   inProgressStores: number;
   
   // Team
   teamMembers: ProjectMember[];
+  assignedTeams?: string[];      // Field team document IDs
   createdBy: string;             // User ID
   createdByName: string;         // User display name
   

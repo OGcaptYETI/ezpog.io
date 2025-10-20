@@ -58,6 +58,7 @@ export interface ProjectFormData {
   
   // Store Management (Phase 2)
   stores?: ProjectStore[];
+  assignedStores?: string[]; // Store IDs for quick lookup
   
   // Team
   teamMembers?: ProjectMember[];
@@ -177,6 +178,10 @@ export async function createProject(
   
   if (data.notes) {
     projectData.notes = data.notes;
+  }
+  
+  if (data.assignedStores && data.assignedStores.length > 0) {
+    projectData.assignedStores = data.assignedStores;
   }
 
   // Final cleanup to ensure no undefined values

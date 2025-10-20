@@ -3,8 +3,10 @@ import { X, FileText, Calendar, MapPin, Users } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { createProject, updateProject } from '@/services/firestore/projects';
 import type { ProjectFormData } from '@/services/firestore/projects';
-import type { Project } from '@/types';
+import type { Project, ProjectStore } from '@/types';
 import { useToast } from '@/shared/components/ui/toast-context';
+import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
+import { db } from '@/services/firebase/config';
 import { BasicInfoTab } from './tabs/BasicInfoTab';
 import { TimelineTab } from './tabs/TimelineTab';
 import { ScopeTab } from './tabs/ScopeTab';
@@ -64,43 +66,100 @@ export function ProjectModal({ isOpen, onClose, onSave, project, mode }: Project
     return new Date(value);
   };
 
+  // Load store details from assignedStores IDs
+  const loadStoresFromIds = async (storeIds: string[]): Promise<ProjectStore[]> => {
+    if (!storeIds || storeIds.length === 0) return [];
+
+    try {
+      // Firestore 'in' query limited to 10 items
+      const batches = [];
+      for (let i = 0; i < storeIds.length; i += 10) {
+        const batch = storeIds.slice(i, i + 10);
+        const storesQuery = query(
+          collection(db, 'stores'),
+          where(documentId(), 'in', batch)
+        );
+        batches.push(getDocs(storesQuery));
+      }
+
+      const results = await Promise.all(batches);
+      const stores: ProjectStore[] = [];
+
+      results.forEach(snapshot => {
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          stores.push({
+            storeId: data.storeId || doc.id,
+            storeName: data.storeName,
+            storeNumber: data.storeNumber,
+            address: data.address,
+            city: data.city,
+            state: data.state,
+            zipCode: data.zipCode,
+            country: data.country || 'USA',
+            chainName: data.chainName || '',
+            chainType: data.chainType || 'corporate',
+            region: data.region,
+            district: data.district,
+            marketArea: data.marketArea,
+            storeFormat: data.storeFormat,
+            resetRequired: false,
+            status: 'pending',
+            verifiedProducts: false,
+          });
+        });
+      });
+
+      return stores;
+    } catch (error) {
+      console.error('Error loading stores:', error);
+      return [];
+    }
+  };
+
   // Update formData when project prop changes (for edit mode)
   useEffect(() => {
-    if (project && mode === 'edit') {
-      setFormData({
-        projectId: project.projectId,
-        name: project.name,
-        description: project.description,
-        projectType: project.projectType,
-        status: project.status,
-        priority: project.priority,
-        startDate: toDate(project.startDate),
-        targetEndDate: toDate(project.targetEndDate),
-        actualEndDate: project.actualEndDate ? toDate(project.actualEndDate) : undefined,
-        milestones: project.milestones?.map(m => ({
-          ...m,
-          targetDate: toDate(m.targetDate),
-          completedDate: m.completedDate ? toDate(m.completedDate) : undefined,
-        })),
-        estimatedBudget: project.estimatedBudget,
-        actualBudget: project.actualBudget,
-        estimatedLaborHours: project.estimatedLaborHours,
-        actualLaborHours: project.actualLaborHours,
-        currency: project.currency,
-        chainName: project.chainName,
-        chainType: project.chainType,
-        region: project.region,
-        district: project.district,
-        stores: project.stores,
-        teamMembers: project.teamMembers,
-        tags: project.tags,
-        notes: project.notes,
-      });
-    } else {
-      setFormData(getInitialFormData());
-    }
-    setActiveTab('basic');
-  }, [project, mode, isOpen]);
+    const loadProjectData = async () => {
+      if (project && mode === 'edit') {
+        // Load full store data from assignedStores IDs
+        const stores = await loadStoresFromIds(project.assignedStores || []);
+
+        setFormData({
+          projectId: project.projectId,
+          name: project.name,
+          description: project.description,
+          projectType: project.projectType,
+          status: project.status,
+          priority: project.priority,
+          startDate: toDate(project.startDate),
+          targetEndDate: toDate(project.targetEndDate),
+          actualEndDate: project.actualEndDate ? toDate(project.actualEndDate) : undefined,
+          milestones: project.milestones?.map(m => ({
+            ...m,
+            targetDate: toDate(m.targetDate),
+            completedDate: m.completedDate ? toDate(m.completedDate) : undefined,
+          })),
+          estimatedBudget: project.estimatedBudget,
+          actualBudget: project.actualBudget,
+          estimatedLaborHours: project.estimatedLaborHours,
+          actualLaborHours: project.actualLaborHours,
+          currency: project.currency,
+          chainName: project.chainName,
+          chainType: project.chainType,
+          region: project.region,
+          district: project.district,
+          stores, // Use loaded store data
+          teamMembers: project.teamMembers,
+          tags: project.tags,
+          notes: project.notes,
+        });
+      } else {
+        setFormData(getInitialFormData());
+      }
+      setActiveTab('basic');
+    };
+    loadProjectData();
+  }, [project, mode]);
 
   const updateFormData = (data: Partial<ProjectFormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
@@ -150,16 +209,19 @@ export function ProjectModal({ isOpen, onClose, onSave, project, mode }: Project
 
     setSaving(true);
     try {
+      // Convert stores to just IDs for assignedStores
+      const assignedStores = formData.stores?.map(s => s.storeId) || [];
+      
       if (mode === 'create') {
         await createProject(
-          formData,
+          { ...formData, assignedStores },
           user.organizationId,
           user.uid,
           user.displayName || user.email || 'Unknown User'
         );
         showToast('Project created successfully!', 'success');
       } else if (project) {
-        await updateProject(project.id, formData);
+        await updateProject(project.id, { ...formData, assignedStores });
         showToast('Project updated successfully!', 'success');
       }
       onSave();
