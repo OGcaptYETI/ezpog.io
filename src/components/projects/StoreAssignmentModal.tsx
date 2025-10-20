@@ -59,11 +59,21 @@ export function StoreAssignmentModal({
     }
   };
 
-  const filteredStores = stores.filter(s =>
-    s.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.storeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.city.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStores = stores.filter(s => {
+    const matchesSearch = searchTerm === '' || 
+      s.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.storeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.storeNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.state.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.zipCode?.includes(searchTerm);
+    
+    const matchesRegion = !filter.region || s.region === filter.region;
+    const matchesDistrict = !filter.district || s.district === filter.district;
+    
+    return matchesSearch && matchesRegion && matchesDistrict;
+  });
 
   const toggleStore = (storeId: string) => {
     const newSelected = new Set(selectedStores);
@@ -132,7 +142,7 @@ export function StoreAssignmentModal({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search stores by name, ID, or city..."
+                placeholder="Search by name, ID, store number, city, state, address, or ZIP..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"

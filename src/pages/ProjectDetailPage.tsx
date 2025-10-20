@@ -509,9 +509,21 @@ export default function ProjectDetailPage() {
                 </div>
               ) : assignedTeams.length > 0 ? (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Assigned Field Teams ({assignedTeams.length})
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Assigned Field Teams ({assignedTeams.length})
+                    </h3>
+                    {canEdit && (
+                      <Button 
+                        onClick={() => setIsEditModalOpen(true)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <UsersIcon className="w-4 h-4 mr-2" />
+                        Manage Teams
+                      </Button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {assignedTeams.map((team) => (
                       <Link
@@ -547,7 +559,19 @@ export default function ProjectDetailPage() {
                   <UsersIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
                   <p className="text-gray-600">Loading assigned teams...</p>
                 </div>
-              ) : null}
+              ) : (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <UsersIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">No Field Teams Assigned</h4>
+                  <p className="text-gray-600 mb-4">Assign field teams to this project to track their progress</p>
+                  {canEdit && (
+                    <Button onClick={() => setIsEditModalOpen(true)}>
+                      <UsersIcon className="w-4 h-4 mr-2" />
+                      Assign Teams
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Individual Team Members */}
               {project.teamMembers && project.teamMembers.length > 0 ? (

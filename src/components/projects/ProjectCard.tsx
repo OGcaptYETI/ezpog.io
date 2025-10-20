@@ -149,7 +149,7 @@ export function ProjectCard({
             <div className="flex items-center justify-center mb-1">
               <Calendar className="w-4 h-4 text-gray-500" />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{project.totalStores || 0}</div>
+            <div className="text-2xl font-bold text-gray-900">{project.assignedStores?.length || 0}</div>
             <div className="text-xs text-gray-500">Stores</div>
           </div>
         </div>
@@ -158,7 +158,7 @@ export function ProjectCard({
         <div className="space-y-2 mb-4">
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>Progress</span>
-            <span>{project.completedStores || 0} / {project.totalStores || 0} stores</span>
+            <span>{project.completedStores || 0} / {project.assignedStores?.length || 0} stores</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
