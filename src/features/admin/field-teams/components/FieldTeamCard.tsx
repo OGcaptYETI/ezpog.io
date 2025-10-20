@@ -15,7 +15,7 @@ export function FieldTeamCard({ team, onEdit, onDelete, onClick, canEdit = false
 
   return (
     <div
-      className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow p-5 cursor-pointer"
+      className="w-full bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow p-5 cursor-pointer"
       onClick={() => onClick?.(team)}
     >
       {/* Header */}
@@ -40,21 +40,16 @@ export function FieldTeamCard({ team, onEdit, onDelete, onClick, canEdit = false
           </div>
         </div>
 
-        {/* Menu - Always reserve space */}
-        <div className="relative w-9 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        {/* Menu - ALWAYS render the same way */}
+        <div className="relative flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={() => canEdit && setShowMenu(!showMenu)}
-            disabled={!canEdit}
-            className={`p-2 rounded-lg transition-colors ${
-              canEdit 
-                ? 'hover:bg-gray-100 cursor-pointer' 
-                : 'opacity-30 cursor-not-allowed'
-            }`}
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <MoreVertical className="w-5 h-5 text-gray-600" />
+            <MoreVertical className={`w-5 h-5 ${canEdit ? 'text-gray-600' : 'text-gray-300'}`} />
           </button>
 
-              {canEdit && showMenu && (
+          {showMenu && canEdit && (
                 <>
                   <div
                     className="fixed inset-0 z-10"
