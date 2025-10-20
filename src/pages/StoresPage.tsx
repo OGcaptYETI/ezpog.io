@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { getStoresByOrganization, bulkDeleteStores, deleteAllStoresForOrganization, type Store } from '@/services/firestore/stores';
-import { Building2, Plus, Search, Upload, Filter, ArrowUp, ArrowDown, Trash2, AlertTriangle, ChevronRight, ChevronDown, Mail, FileText } from 'lucide-react';
+import { Building2, Plus, Search, Upload, MapPin, Filter, ArrowUp, ArrowDown, Trash2, AlertTriangle, ChevronRight, ChevronDown, Mail, FileText } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
