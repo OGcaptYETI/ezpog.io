@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { getProject } from '@/services/firestore/projects';
+import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
+import { db } from '@/services/firebase/config';
 import type { Project } from '@/types';
+import type { FieldTeam } from '@/types/fieldTeams';
 import { 
   ArrowLeft, 
   Edit, 
@@ -34,6 +37,10 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [assignedStores, setAssignedStores] = useState<any[]>([]);
+  const [assignedTeams, setAssignedTeams] = useState<FieldTeam[]>([]);
+  const [loadingStores, setLoadingStores] = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(false);
 
   // RBAC permissions
   const canEdit = user?.role === 'admin' || user?.role === 'manager';
@@ -41,6 +48,18 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     loadProject();
   }, [projectId]);
+
+  useEffect(() => {
+    if (project && activeTab === 'stores' && project.assignedStores && project.assignedStores.length > 0) {
+      loadAssignedStores();
+    }
+  }, [activeTab, project]);
+
+  useEffect(() => {
+    if (project && activeTab === 'team' && project.assignedTeams && project.assignedTeams.length > 0) {
+      loadAssignedTeams();
+    }
+  }, [activeTab, project]);
 
   const loadProject = async () => {
     if (!projectId) return;
@@ -91,6 +110,50 @@ export default function ProjectDetailPage() {
       case 'medium': return 'bg-yellow-100 text-yellow-700';
       case 'low': return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const loadAssignedStores = async () => {
+    if (!project?.assignedStores || project.assignedStores.length === 0) return;
+
+    setLoadingStores(true);
+    try {
+      const storesQuery = query(
+        collection(db, 'stores'),
+        where(documentId(), 'in', project.assignedStores.slice(0, 10)) // Firestore limit
+      );
+      const storesSnapshot = await getDocs(storesQuery);
+      const storesData = storesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAssignedStores(storesData);
+    } catch (error) {
+      console.error('Error loading assigned stores:', error);
+    } finally {
+      setLoadingStores(false);
+    }
+  };
+
+  const loadAssignedTeams = async () => {
+    if (!project?.assignedTeams || project.assignedTeams.length === 0) return;
+
+    setLoadingTeams(true);
+    try {
+      const teamsQuery = query(
+        collection(db, 'fieldTeams'),
+        where(documentId(), 'in', project.assignedTeams.slice(0, 10)) // Firestore limit
+      );
+      const teamsSnapshot = await getDocs(teamsQuery);
+      const teamsData = teamsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FieldTeam[];
+      setAssignedTeams(teamsData);
+    } catch (error) {
+      console.error('Error loading assigned teams:', error);
+    } finally {
+      setLoadingTeams(false);
     }
   };
 
@@ -371,20 +434,122 @@ export default function ProjectDetailPage() {
           )}
 
           {activeTab === 'stores' && (
-            <div className="text-center py-12">
-              <Building2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Store Management</h3>
-              <p className="text-gray-600 mb-6">
-                Store assignment and tracking will be available in Phase 2
-              </p>
-              <p className="text-sm text-gray-500">
-                Total Stores: {project.totalStores || 0} | Completed: {project.completedStores || 0}
-              </p>
+            <div>
+              {loadingStores ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto" />
+                </div>
+              ) : assignedStores.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Assigned Stores ({project.assignedStores?.length || 0})
+                    </h3>
+                    <Link 
+                      to="/dashboard/stores"
+                      className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                    >
+                      View All Stores →
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {assignedStores.map((store) => (
+                      <Link
+                        key={store.id}
+                        to={`/dashboard/stores/${store.id}`}
+                        className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors border border-gray-200"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Building2 className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-900 truncate">{store.storeName}</h4>
+                            <p className="text-sm text-gray-600">{store.storeId || store.storeNumber}</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {store.city}, {store.state} {store.zipCode}
+                            </p>
+                            {store.region && (
+                              <span className="inline-block mt-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded">
+                                {store.region}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  {project.assignedStores && project.assignedStores.length > 10 && (
+                    <p className="text-sm text-gray-500 text-center mt-4">
+                      Showing first 10 of {project.assignedStores.length} stores
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Building2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Stores Assigned</h3>
+                  <p className="text-gray-600 mb-6">
+                    Assign stores to this project from the Stores page
+                  </p>
+                  {canEdit && (
+                    <Button onClick={() => setIsEditModalOpen(true)}>
+                      Edit Project
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === 'team' && (
-            <div>
+            <div className="space-y-8">
+              {/* Assigned Field Teams */}
+              {loadingTeams ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+                </div>
+              ) : assignedTeams.length > 0 ? (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Assigned Field Teams ({assignedTeams.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {assignedTeams.map((team) => (
+                      <Link
+                        key={team.id}
+                        to={`/dashboard/field-teams/${team.id}`}
+                        className="bg-blue-50 rounded-lg p-4 hover:bg-blue-100 transition-colors border-2 border-blue-200"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            team.type === 'internal' ? 'bg-blue-600' : 'bg-purple-600'
+                          }`}>
+                            <UsersIcon className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-900">{team.name}</h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {team.type === 'internal' ? 'Internal Team' : '1099 Contractor'}
+                            </p>
+                            <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
+                              <span>{team.members?.length || 0} members</span>
+                              {team.assignedStores && (
+                                <span>• {team.assignedStores.length} stores</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : project.assignedTeams && project.assignedTeams.length > 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <UsersIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-600">Loading assigned teams...</p>
+                </div>
+              ) : null}
+
+              {/* Individual Team Members */}
               {project.teamMembers && project.teamMembers.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {project.teamMembers.map((member, index) => (
