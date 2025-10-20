@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth';
 import { getFieldTeamsByOrganization, deleteFieldTeam } from '@/services/firestore/fieldTeams';
 import { FieldTeamCard } from '@/features/admin/field-teams/components/FieldTeamCard';
 import { CreateFieldTeamModal } from '@/features/admin/field-teams/components/CreateFieldTeamModal';
+import { EditFieldTeamModal } from '@/features/admin/field-teams/components/EditFieldTeamModal';
 import type { FieldTeam } from '@/types/fieldTeams';
 
 export default function FieldTeamsPage() {
@@ -15,6 +16,8 @@ export default function FieldTeamsPage() {
   const [teams, setTeams] = useState<FieldTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [teamToEdit, setTeamToEdit] = useState<FieldTeam | null>(null);
   const [teamToDelete, setTeamToDelete] = useState<FieldTeam | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -137,7 +140,10 @@ export default function FieldTeamsPage() {
               key={team.id}
               team={team}
               canEdit={canEdit}
-              onEdit={() => showToast('Edit functionality coming in Phase 6!', 'info')}
+              onEdit={() => {
+                setTeamToEdit(team);
+                setShowEditModal(true);
+              }}
               onDelete={() => setTeamToDelete(team)}
               onClick={() => showToast(`Team detail view coming in Phase 6! Team: ${team.name}`, 'info')}
             />
@@ -151,6 +157,19 @@ export default function FieldTeamsPage() {
         onClose={() => setShowCreateModal(false)}
         onSuccess={loadTeams}
       />
+
+      {/* Edit Modal */}
+      {teamToEdit && (
+        <EditFieldTeamModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setTeamToEdit(null);
+          }}
+          onSuccess={loadTeams}
+          team={teamToEdit}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {teamToDelete && (
