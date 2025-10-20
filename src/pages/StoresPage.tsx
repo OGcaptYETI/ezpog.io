@@ -649,13 +649,29 @@ export default function StoresPage() {
                       <tr key={`${store.id}-expanded`} className="bg-gray-50">
                         <td colSpan={canDelete ? 8 : 7} className="px-6 py-4">
                           <div className="grid grid-cols-3 gap-6">
-                            {/* Fixture Thumbnail */}
+                            {/* Store Image */}
                             <div className="col-span-1">
                               <h4 className="text-xs font-semibold text-gray-700 mb-2">Store Image</h4>
-                              <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center">
-                                <Building2 className="w-12 h-12 text-gray-300" />
-                                <span className="text-xs text-gray-400 ml-2">No image</span>
-                              </div>
+                              {(() => {
+                                const storeImages = (store as any).images || [];
+                                const featuredImage = (store as any).featuredImage;
+                                const displayImage = featuredImage || (storeImages.length > 0 ? storeImages[0].url : null);
+                                
+                                return displayImage ? (
+                                  <div className="bg-white border-2 border-gray-200 rounded-lg h-32 overflow-hidden">
+                                    <img
+                                      src={displayImage}
+                                      alt={store.storeName}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center">
+                                    <Building2 className="w-12 h-12 text-gray-300" />
+                                    <span className="text-xs text-gray-400 ml-2">No image</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
 
                             {/* Store Details */}
