@@ -10,7 +10,7 @@ import { db } from '@/services/firebase/config';
 import { BasicInfoTab } from './tabs/BasicInfoTab';
 import { TimelineTab } from './tabs/TimelineTab';
 import { ScopeTab } from './tabs/ScopeTab';
-import { TeamTab } from './tabs/TeamTab';
+import { TeamTab } from './tabs/TeamTabEnhanced';
 
 type TabId = 'basic' | 'timeline' | 'scope' | 'team';
 
@@ -290,7 +290,12 @@ export function ProjectModal({ isOpen, onClose, onSave, project, mode }: Project
             <ScopeTab formData={formData} updateFormData={updateFormData} />
           )}
           {activeTab === 'team' && (
-            <TeamTab formData={formData} updateFormData={updateFormData} />
+            <TeamTab 
+              formData={formData} 
+              updateFormData={updateFormData}
+              projectId={project?.id}
+              projectName={project?.name}
+            />
           )}
         </div>
 
