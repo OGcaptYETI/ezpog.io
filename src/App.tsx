@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import StoresPage from './pages/StoresPage';
+import StoreDetailPage from './pages/StoreDetailPage';
 import PlanogramsPage from './pages/PlanogramsPage';
 import ProductsPage from './pages/ProductsPage';
 import InventoryPage from './pages/InventoryPage';
@@ -52,6 +53,7 @@ function App() {
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="projects/:projectId" element={<ProjectDetailPage />} />
             <Route path="stores" element={<StoresPage />} />
+            <Route path="stores/:storeId" element={<StoreDetailPage />} />
             <Route path="planograms" element={<PlanogramsPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="inventory" element={<InventoryPage />} />

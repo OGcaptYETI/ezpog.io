@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { getStoresByOrganization, bulkDeleteStores, deleteAllStoresForOrganization, type Store } from '@/services/firestore/stores';
-import { Building2, Plus, Search, Upload, MapPin, Phone, User, Filter, ArrowUpDown, ArrowUp, ArrowDown, Trash2, AlertTriangle, ChevronRight, ChevronDown, Mail, FileText } from 'lucide-react';
+import { Building2, Plus, Search, Upload, Filter, ArrowUp, ArrowDown, Trash2, AlertTriangle, ChevronRight, ChevronDown, Mail, FileText } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/components/ui/toast-context';
 import { CSVImportModal } from '@/components/stores/CSVImportModal';
@@ -12,6 +13,7 @@ type SortDirection = 'asc' | 'desc';
 export default function StoresPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -592,7 +594,7 @@ export default function StoresPage() {
                       {/* Store Name - Clickable */}
                       <td className="px-3 py-2">
                         <button
-                          onClick={() => window.location.href = `/stores/${store.id}`}
+                          onClick={() => navigate(`/dashboard/stores/${store.id}`)}
                           className="text-left hover:text-indigo-600 font-medium transition-colors"
                         >
                           {store.storeName}
@@ -723,7 +725,7 @@ export default function StoresPage() {
                               </dl>
                               <div className="mt-3">
                                 <Button
-                                  onClick={() => window.location.href = `/stores/${store.id}`}
+                                  onClick={() => navigate(`/dashboard/stores/${store.id}`)}
                                   variant="outline"
                                   className="w-full text-xs"
                                 >
