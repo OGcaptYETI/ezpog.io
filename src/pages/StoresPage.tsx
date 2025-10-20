@@ -646,19 +646,18 @@ export default function StoresPage() {
 
                     {/* Expandable Detail Row */}
                     {isExpanded && (
-                      <tr key={`${store.id}-expanded`} className="bg-gray-50">
-                        <td colSpan={canDelete ? 8 : 7} className="px-6 py-4">
-                          <div className="grid grid-cols-3 gap-6">
-                            {/* Store Image */}
-                            <div className="col-span-1">
-                              <h4 className="text-xs font-semibold text-gray-700 mb-2">Store Image</h4>
+                      <tr key={`${store.id}-expanded`} className="bg-gradient-to-r from-indigo-50 to-blue-50">
+                        <td colSpan={canDelete ? 8 : 7} className="px-8 py-6">
+                          <div className="flex gap-6">
+                            {/* Store Image - Compact */}
+                            <div className="flex-shrink-0">
                               {(() => {
                                 const storeImages = (store as any).images || [];
                                 const featuredImage = (store as any).featuredImage;
                                 const displayImage = featuredImage || (storeImages.length > 0 ? storeImages[0].url : null);
                                 
                                 return displayImage ? (
-                                  <div className="bg-white border-2 border-gray-200 rounded-lg h-32 overflow-hidden">
+                                  <div className="w-32 h-24 bg-white border border-indigo-200 rounded-lg overflow-hidden shadow-sm">
                                     <img
                                       src={displayImage}
                                       alt={store.storeName}
@@ -666,87 +665,111 @@ export default function StoresPage() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center">
-                                    <Building2 className="w-12 h-12 text-gray-300" />
-                                    <span className="text-xs text-gray-400 ml-2">No image</span>
+                                  <div className="w-32 h-24 bg-white border border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                                    <Building2 className="w-8 h-8 text-gray-300" />
                                   </div>
                                 );
                               })()}
                             </div>
 
-                            {/* Store Details */}
-                            <div className="col-span-1">
-                              <h4 className="text-xs font-semibold text-gray-700 mb-2">Store Details</h4>
-                              <dl className="space-y-1 text-xs">
-                                <div className="flex justify-between">
-                                  <dt className="text-gray-500">Store ID:</dt>
-                                  <dd className="text-gray-900 font-mono">{store.storeId}</dd>
-                                </div>
-                                {store.storeNumber && (
-                                  <div className="flex justify-between">
-                                    <dt className="text-gray-500">Store Number:</dt>
-                                    <dd className="text-gray-900 font-mono">#{store.storeNumber}</dd>
-                                  </div>
-                                )}
-                                <div className="flex justify-between">
-                                  <dt className="text-gray-500">Format:</dt>
-                                  <dd className="text-gray-900">{store.storeFormat}</dd>
-                                </div>
-                                <div className="flex justify-between">
-                                  <dt className="text-gray-500">Status:</dt>
-                                  <dd>
-                                    <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                      store.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                                    }`}>
-                                      {store.isActive ? 'Active' : 'Inactive'}
-                                    </span>
-                                  </dd>
-                                </div>
-                                {store.squareFootage && (
-                                  <div className="flex justify-between">
-                                    <dt className="text-gray-500">Square Footage:</dt>
-                                    <dd className="text-gray-900">{store.squareFootage.toLocaleString()} sq ft</dd>
-                                  </div>
-                                )}
-                              </dl>
-                            </div>
-
-                            {/* Contact & Location */}
-                            <div className="col-span-1">
-                              <h4 className="text-xs font-semibold text-gray-700 mb-2">Contact & Location</h4>
-                              <dl className="space-y-1 text-xs">
-                                <div>
-                                  <dt className="text-gray-500">Address:</dt>
-                                  <dd className="text-gray-900">{store.address}</dd>
-                                  <dd className="text-gray-900">{store.city}, {store.state} {store.zipCode}</dd>
-                                </div>
-                                {store.storeManagerName && (
-                                  <div className="mt-2">
-                                    <dt className="text-gray-500">Manager:</dt>
-                                    <dd className="text-gray-900">{store.storeManagerName}</dd>
-                                  </div>
-                                )}
-                                {store.storeManagerEmail && (
+                            {/* Store Details - Clean Cards */}
+                            <div className="flex-1 grid grid-cols-3 gap-4">
+                              {/* Store Info Card */}
+                              <div className="bg-white rounded-lg border border-indigo-100 p-4 shadow-sm">
+                                <h4 className="text-xs font-bold text-indigo-900 mb-3 uppercase tracking-wide">Store Details</h4>
+                                <dl className="space-y-2">
                                   <div>
-                                    <dt className="text-gray-500">Email:</dt>
-                                    <dd className="text-gray-900">{store.storeManagerEmail}</dd>
+                                    <dt className="text-xs text-gray-500 mb-0.5">Store ID</dt>
+                                    <dd className="text-sm font-semibold text-gray-900 font-mono">{store.storeId}</dd>
                                   </div>
-                                )}
-                                {store.district && (
-                                  <div className="mt-2">
-                                    <dt className="text-gray-500">District:</dt>
-                                    <dd className="text-gray-900">{store.district}</dd>
+                                  {store.storeNumber && (
+                                    <div>
+                                      <dt className="text-xs text-gray-500 mb-0.5">Store Number</dt>
+                                      <dd className="text-sm font-semibold text-gray-900">#{store.storeNumber}</dd>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <dt className="text-xs text-gray-500 mb-0.5">Format</dt>
+                                    <dd className="text-sm text-gray-900">{store.storeFormat}</dd>
                                   </div>
-                                )}
-                              </dl>
-                              <div className="mt-3">
-                                <Button
-                                  onClick={() => navigate(`/dashboard/stores/${store.id}`)}
-                                  variant="outline"
-                                  className="w-full text-xs"
-                                >
-                                  View Full Details
-                                </Button>
+                                  <div>
+                                    <dt className="text-xs text-gray-500 mb-0.5">Status</dt>
+                                    <dd>
+                                      <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                                        store.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                                      }`}>
+                                        {store.isActive ? '● Active' : '○ Inactive'}
+                                      </span>
+                                    </dd>
+                                  </div>
+                                  {store.squareFootage && (
+                                    <div>
+                                      <dt className="text-xs text-gray-500 mb-0.5">Square Footage</dt>
+                                      <dd className="text-sm text-gray-900">{store.squareFootage.toLocaleString()} sq ft</dd>
+                                    </div>
+                                  )}
+                                </dl>
+                              </div>
+
+                              {/* Location Card */}
+                              <div className="bg-white rounded-lg border border-indigo-100 p-4 shadow-sm">
+                                <h4 className="text-xs font-bold text-indigo-900 mb-3 uppercase tracking-wide">Location</h4>
+                                <dl className="space-y-2">
+                                  <div>
+                                    <dt className="text-xs text-gray-500 mb-0.5">Address</dt>
+                                    <dd className="text-sm text-gray-900 leading-tight">
+                                      {store.address}<br />
+                                      {store.city}, {store.state} {store.zipCode}
+                                    </dd>
+                                  </div>
+                                  {store.region && (
+                                    <div>
+                                      <dt className="text-xs text-gray-500 mb-0.5">Region</dt>
+                                      <dd className="text-sm text-gray-900">{store.region}</dd>
+                                    </div>
+                                  )}
+                                  {store.district && (
+                                    <div>
+                                      <dt className="text-xs text-gray-500 mb-0.5">District</dt>
+                                      <dd className="text-sm text-gray-900">{store.district}</dd>
+                                    </div>
+                                  )}
+                                </dl>
+                              </div>
+
+                              {/* Contact Card */}
+                              <div className="bg-white rounded-lg border border-indigo-100 p-4 shadow-sm">
+                                <h4 className="text-xs font-bold text-indigo-900 mb-3 uppercase tracking-wide">Contact</h4>
+                                <dl className="space-y-2">
+                                  {store.storeManagerName && (
+                                    <div>
+                                      <dt className="text-xs text-gray-500 mb-0.5">Manager</dt>
+                                      <dd className="text-sm text-gray-900">{store.storeManagerName}</dd>
+                                    </div>
+                                  )}
+                                  {store.storeManagerEmail && (
+                                    <div>
+                                      <dt className="text-xs text-gray-500 mb-0.5">Email</dt>
+                                      <dd className="text-sm text-indigo-600 hover:text-indigo-700 truncate">
+                                        <a href={`mailto:${store.storeManagerEmail}`}>{store.storeManagerEmail}</a>
+                                      </dd>
+                                    </div>
+                                  )}
+                                  {store.storePhone && (
+                                    <div>
+                                      <dt className="text-xs text-gray-500 mb-0.5">Phone</dt>
+                                      <dd className="text-sm text-gray-900">{store.storePhone}</dd>
+                                    </div>
+                                  )}
+                                </dl>
+                                <div className="mt-4 pt-3 border-t border-gray-100">
+                                  <Button
+                                    onClick={() => navigate(`/dashboard/stores/${store.id}`)}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold"
+                                  >
+                                    View Full Details →
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </div>
