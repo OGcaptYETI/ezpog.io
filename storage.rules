@@ -64,5 +64,11 @@ service firebase.storage {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isValidFileSize();
     }
+    
+    // Store images
+    match /stores/{storeId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidImageSize() && isImage();
+    }
   }
 }
